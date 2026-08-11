@@ -45,8 +45,8 @@
     Time range: <strong>60 phút</strong> ·
     Refresh: 30s ·
     Nguồn: <code>data/logs.jsonl</code> ·
-    Cửa sổ dữ liệu: 08:40:16 → 08:40:40 UTC ·
-    40 log records · Sinh lúc 2026-08-11 08:44:25 UTC
+    Cửa sổ dữ liệu: 08:40:16 → 09:00:57 UTC ·
+    86 log records · Sinh lúc 2026-08-11 09:15:14 UTC
   </p>
   <div class="grid">
       <section class="card ok">
@@ -54,9 +54,9 @@
           <h2>Latency percentiles</h2>
           <span class="badge">ĐẠT</span>
         </header>
-        <p class="unit">đơn vị: ms · n=20</p>
-        <div class="rows"><div class="row"><span>p50</span><strong>1,150</strong></div><div class="row"><span>p95</span><strong>1,547</strong></div><div class="row"><span>p99</span><strong>1,547</strong></div></div>
-        <svg class="spark" viewBox="0 0 260 40" preserveAspectRatio="none" role="img" aria-label="xu hướng 20 điểm"><polyline points="0.0,35.8 13.7,35.0 27.4,33.3 41.1,29.6 54.7,36.0 68.4,17.3 82.1,32.3 95.8,34.4 109.5,34.5 123.2,36.1 136.8,35.5 150.5,35.6 164.2,30.7 177.9,3.0 191.6,29.5 205.3,30.3 218.9,34.0 232.6,36.7 246.3,35.3 260.0,37.0" fill="none" stroke="var(--ok)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+        <p class="unit">đơn vị: ms · n=40</p>
+        <div class="rows"><div class="row"><span>p50</span><strong>1,137</strong></div><div class="row"><span>p95</span><strong>1,213</strong></div><div class="row"><span>p99</span><strong>1,547</strong></div></div>
+        <svg class="spark" viewBox="0 0 260 40" preserveAspectRatio="none" role="img" aria-label="xu hướng 40 điểm"><polyline points="0.0,13.1 6.7,12.8 13.3,12.3 20.0,11.2 26.7,13.1 33.3,7.4 40.0,12.0 46.7,12.6 53.3,12.7 60.0,13.1 66.7,13.0 73.3,13.0 80.0,11.5 86.7,3.0 93.3,11.1 100.0,11.4 106.7,12.5 113.3,13.3 120.0,12.9 126.7,13.4 133.3,11.4 140.0,11.9 146.7,12.6 153.3,12.7 160.0,13.4 166.7,13.5 173.3,13.2 180.0,12.6 186.7,12.1 193.3,13.2 200.0,26.0 206.7,37.0 213.3,37.0 220.0,37.0 226.7,37.0 233.3,37.0 240.0,37.0 246.7,37.0 253.3,37.0 260.0,37.0" fill="none" stroke="var(--ok)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
         <p class="threshold">Threshold / SLO line: p95 ≤ 3,000 ms</p>
       </section>
       <section class="card bad">
@@ -64,8 +64,8 @@
           <h2>Request traffic</h2>
           <span class="badge">VƯỢT NGƯỠNG</span>
         </header>
-        <p class="unit">đơn vị: requests_per_minute · n=20</p>
-        <div class="rows"><div class="row"><span>count</span><strong>20</strong></div><div class="row"><span>rate_per_minute</span><strong>0.33</strong></div></div>
+        <p class="unit">đơn vị: requests_per_minute · n=40</p>
+        <div class="rows"><div class="row"><span>count</span><strong>40</strong></div><div class="row"><span>rate_per_minute</span><strong>0.67</strong></div></div>
         
         <p class="threshold">Threshold / SLO line: rate_per_minute ≥ 1 requests_per_minute</p>
       </section>
@@ -74,8 +74,8 @@
           <h2>Error rate and breakdown</h2>
           <span class="badge">ĐẠT</span>
         </header>
-        <p class="unit">đơn vị: percent · n=20</p>
-        <div class="rows"><div class="row"><span>error_rate_pct</span><strong>0</strong></div><div class="row"><span>failed</span><strong>0</strong></div><div class="row"><span>received</span><strong>20</strong></div><div class="row sub"><span>không có lỗi</span><strong>0</strong></div></div>
+        <p class="unit">đơn vị: percent · n=40</p>
+        <div class="rows"><div class="row"><span>error_rate_pct</span><strong>0</strong></div><div class="row"><span>failed</span><strong>0</strong></div><div class="row"><span>received</span><strong>40</strong></div><div class="row sub"><span>không có lỗi</span><strong>0</strong></div></div>
         
         <p class="threshold">Threshold / SLO line: error_rate_pct ≤ 2 percent</p>
       </section>
@@ -84,9 +84,9 @@
           <h2>Cost over time</h2>
           <span class="badge">ĐẠT</span>
         </header>
-        <p class="unit">đơn vị: usd · n=20</p>
-        <div class="rows"><div class="row"><span>total</span><strong>0.043</strong></div><div class="row"><span>avg_per_request</span><strong>0.0022</strong></div></div>
-        
+        <p class="unit">đơn vị: usd · n=40</p>
+        <div class="rows"><div class="row"><span>total</span><strong>0.0837</strong></div><div class="row"><span>avg_per_request</span><strong>0.0021</strong></div></div>
+        <svg class="spark" viewBox="0 0 260 40" preserveAspectRatio="none" role="img" aria-label="xu hướng 3 điểm"><polyline points="0.0,3.0 130.0,34.6 260.0,37.0" fill="none" stroke="var(--ok)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
         <p class="threshold">Threshold / SLO line: total ≤ 2.5 usd</p>
       </section>
       <section class="card ok">
@@ -94,8 +94,8 @@
           <h2>Input and output tokens</h2>
           <span class="badge">ĐẠT</span>
         </header>
-        <p class="unit">đơn vị: tokens · n=20</p>
-        <div class="rows"><div class="row"><span>tokens_in</span><strong>660</strong></div><div class="row"><span>tokens_out</span><strong>2,737</strong></div><div class="row"><span>total</span><strong>3,397</strong></div></div>
+        <p class="unit">đơn vị: tokens · n=40</p>
+        <div class="rows"><div class="row"><span>tokens_in</span><strong>1,420</strong></div><div class="row"><span>tokens_out</span><strong>5,298</strong></div><div class="row"><span>total</span><strong>6,718</strong></div></div>
         
         <p class="threshold">Threshold / SLO line: sum_by_field ≤ 50,000 tokens</p>
       </section>
@@ -104,9 +104,9 @@
           <h2>Quality proxy</h2>
           <span class="badge">ĐẠT</span>
         </header>
-        <p class="unit">đơn vị: score_0_to_1 · n=20</p>
+        <p class="unit">đơn vị: score_0_to_1 · n=40</p>
         <div class="rows"><div class="row"><span>mean</span><strong>0.88</strong></div></div>
-        <svg class="spark" viewBox="0 0 260 40" preserveAspectRatio="none" role="img" aria-label="xu hướng 20 điểm"><polyline points="0.0,37.0 13.7,3.0 27.4,37.0 41.1,3.0 54.7,3.0 68.4,3.0 82.1,3.0 95.8,3.0 109.5,3.0 123.2,3.0 136.8,3.0 150.5,37.0 164.2,37.0 177.9,3.0 191.6,3.0 205.3,3.0 218.9,3.0 232.6,3.0 246.3,3.0 260.0,3.0" fill="none" stroke="var(--ok)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+        <svg class="spark" viewBox="0 0 260 40" preserveAspectRatio="none" role="img" aria-label="xu hướng 40 điểm"><polyline points="0.0,37.0 6.7,3.0 13.3,37.0 20.0,3.0 26.7,3.0 33.3,3.0 40.0,3.0 46.7,3.0 53.3,3.0 60.0,3.0 66.7,3.0 73.3,37.0 80.0,37.0 86.7,3.0 93.3,3.0 100.0,3.0 106.7,3.0 113.3,3.0 120.0,3.0 126.7,3.0 133.3,37.0 140.0,3.0 146.7,37.0 153.3,3.0 160.0,3.0 166.7,3.0 173.3,3.0 180.0,3.0 186.7,3.0 193.3,3.0 200.0,37.0 206.7,3.0 213.3,37.0 220.0,3.0 226.7,3.0 233.3,3.0 240.0,3.0 246.7,3.0 253.3,3.0 260.0,3.0" fill="none" stroke="var(--ok)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
         <p class="threshold">Threshold / SLO line: mean ≥ 0.75 score_0_to_1</p>
       </section></div>
 </body>

@@ -4,14 +4,14 @@ Mỗi alert phải dựa trên triệu chứng người dùng hoặc SLO, không
 
 Nguồn cấu hình: [`config/alert_rules.yaml`](../config/alert_rules.yaml). SLO tham chiếu: [`config/slo.yaml`](../config/slo.yaml).
 
-Baseline đo được (10 request, không có incident): P95 ≈ 1087 ms, error rate 0%, cost ≈ $0.02, quality ≈ 0.88.
+Baseline đo được (40 request, không có incident): P95 ≈ 1213 ms, error rate 0%, cost ≈ $0.08, quality ≈ 0.88.
 
 ## Alert 1
 
 - Tên: `high_latency_p95`
 - Severity: warning
 - SLI/SLO liên quan: `latency_p95_ms` — objective 3000 ms, target 99.5%
-- Điều kiện và thời gian duy trì: `latency_p95 > 3000ms` duy trì liên tục 5 phút. Baseline ≈ 1087 ms nên ngưỡng này cách baseline ~2.8x, đủ để bỏ qua nhiễu ngắn hạn nhưng vẫn bắt được suy giảm thật.
+- Điều kiện và thời gian duy trì: `latency_p95 > 3000ms` duy trì liên tục 5 phút. Baseline ≈ 1213 ms nên ngưỡng này cách baseline ~2.5x, đủ để bỏ qua nhiễu ngắn hạn nhưng vẫn bắt được suy giảm thật.
 - Ảnh hưởng tới người dùng: người dùng chờ quá 3 giây mỗi câu trả lời; ở mức nặng client có thể timeout và người dùng gửi lại request, làm tải tăng thêm.
 - Ba bước kiểm tra đầu tiên:
   1. Mở `/metrics`, so sánh `latency_p50` với `latency_p95`. Nếu P50 vẫn bình thường mà chỉ P95 tăng thì vấn đề nằm ở một nhóm request đuôi, không phải toàn hệ thống.

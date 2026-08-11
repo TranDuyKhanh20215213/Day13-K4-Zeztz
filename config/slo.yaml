@@ -5,9 +5,9 @@ slis:
     objective: 3000
     target: 99.5
     note: >-
-      Baseline đo được P95 ≈ 1547 ms ở concurrency 2, nên ngưỡng 3000 ms cách
-      baseline khoảng 2x và không kêu vì nhiễu thường ngày. Khi bật incident
-      rag_slow, P95 lên 3797 ms và vượt ngưỡng đúng như mong đợi.
+      Baseline đo được P95 ≈ 1213 ms, nên ngưỡng 3000 ms cách baseline khoảng
+      2.5x và không kêu vì nhiễu thường ngày. Khi bật incident rag_slow, P95 lên
+      3730 ms và vượt ngưỡng đúng như mong đợi.
   error_rate_pct:
     objective: 2
     target: 99.0

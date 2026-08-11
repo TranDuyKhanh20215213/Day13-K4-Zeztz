@@ -41,15 +41,19 @@ Cấu hình chung: time range mặc định **60 phút**, refresh **30 giây**, 
 | 5 | Input and output tokens | tokens | `response_sent.tokens_in`, `response_sent.tokens_out` | sum theo từng field | ≤ 50000 |
 | 6 | Quality proxy | score 0–1 | `response_sent.quality_score` | mean | ≥ 0.75 |
 
-Giá trị baseline đo được với 10 request, không bật incident:
+Giá trị baseline đo được với 40 request, không bật incident:
 
 | Panel | Baseline | Trạng thái so với threshold |
 |---|---|---|
-| Latency | P50 1009 ms · P95 1087 ms · P99 1087 ms | đạt (P95 cách ngưỡng ~2.8x) |
-| Traffic | 10 request | đạt |
+| Latency | P50 1137 ms · P95 1213 ms · P99 1547 ms | đạt (P95 cách ngưỡng ~2.5x) |
+| Traffic | 40 request · 0.67 req/phút | dưới ngưỡng (xem ghi chú bên dưới) |
 | Errors | 0% (`error_breakdown` rỗng) | đạt |
-| Cost | tổng $0.02 · trung bình $0.002/request | đạt |
-| Tokens | in 330 · out 1268 | đạt |
+| Cost | tổng $0.0837 · trung bình $0.0021/request | đạt |
+| Tokens | in 1420 · out 5298 · tổng 6718 | đạt |
 | Quality | 0.88 | đạt |
+
+Panel Traffic báo dưới ngưỡng là đúng về mặt tính toán: contract yêu cầu ≥ 1 request/phút
+trong khi load test chỉ gửi 40 request rồi dừng, chia cho cửa sổ 60 phút ra 0.67. Đây là
+đặc thù của lab chạy theo đợt, không phải dịch vụ chạy liên tục.
 
 Threshold lấy đúng theo `config/dashboard.yaml` và khớp với `config/slo.yaml`; không chỉnh contract để ảnh dashboard đẹp hơn.
