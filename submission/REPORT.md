@@ -9,8 +9,8 @@
 
 | Vai trò | Họ tên | MSSV | Phạm vi phụ trách |
 |---|---|---|---|
-| A — Logging & Middleware | Trần Duy Khánh | 2A202601696 | CP1: middleware, correlation ID, gắn metadata vào log |
-| B — Security & Compliance | Nguyễn Hùng Phát | 2A202601094 | CP1: bật processor che PII, cấu hình regex, nâng cấp che PII toàn cục |
+| A — Logging & Middleware | Nguyễn Hùng Phát | 2A202601094 | CP1: middleware, correlation ID, gắn metadata vào log |
+| B — Security & Compliance | Trần Duy Khánh | 2A202601696 | CP1: bật processor che PII, cấu hình regex, nâng cấp che PII toàn cục |
 | C — Metrics & Alerting | Lê Nhật Hoàng | 2A202601128 | CP2: tích hợp Langfuse, đo `error_rate_pct`, viết SLO, alert rules và runbook |
 | D — QA & Incident Analyst | Phạm Nguyễn Khánh Minh | 2A202602040 | Chạy load test sinh dữ liệu, thiết kế Dashboard Spec, chủ trì điều tra Challenge (CP3), viết `REPORT.md` |
 
@@ -24,10 +24,11 @@
   - Potential PII leaks detected: 0
   - Scorecard: [FAILED] Missing required fields, [FAILED] Correlation ID propagation, [FAILED] Log enrichment, [PASSED] PII scrubbing
 - Điểm `validate_logs.py`: **Sau Checkpoint 1: 100/100**
-  - Total log records analyzed: 20
+  (ảnh: `submission/evidence/validate-logs-100.png`)
+  - Total log records analyzed: 91
   - Records with missing required fields: 0
   - Records with missing enrichment (context): 0
-  - Unique correlation IDs found: 10
+  - Unique correlation IDs found: 42
   - Potential PII leaks detected: 0
   - Scorecard: [PASSED] Basic JSON schema, [PASSED] Correlation ID propagation, [PASSED] Log enrichment, [PASSED] PII scrubbing
 - Tổng số traces: **14** trên Langfuse Cloud (region JP), tất cả đều có
@@ -57,8 +58,12 @@ Hai log line của cùng một request (`req-508f481a`) — nối được từ 
  "model": "claude-sonnet-4-5", "level": "info", "ts": "2026-08-11T10:25:52.082973Z"}
 ```
 
-Kết quả `validate_logs.py`: **10 unique correlation ID / 10 request**, 0 record thiếu
+Kết quả `validate_logs.py`: **42 unique correlation ID / 91 log record**, 0 record thiếu
 trường bắt buộc, 0 record thiếu metadata enrichment.
+
+Evidence: `submission/evidence/logs-correlation-id.png` — ảnh chụp 4 log line cuối, thấy
+rõ `req-0953f0f7` và `req-71170b4a` mỗi ID xuất hiện ở **cả** `request_received` và
+`response_sent` của cùng request.
 
 ### Evidence PII redaction
 
@@ -79,6 +84,16 @@ Hai log line thật, input có PII nhưng log đã che:
 
 Ngoài ra `user_id` không bao giờ vào log ở dạng gốc — luôn là `user_id_hash`
 (ví dụ `2055254ee30a`). `validate_logs.py` báo **0 PII leak**.
+
+Evidence:
+- `submission/evidence/logs-pii-redacted.png` và `logs-pii-redacted-2.png` — lọc
+  `data/logs.jsonl` theo `REDACTED`, thấy đủ ba loại: `[REDACTED_EMAIL]`,
+  `[REDACTED_PHONE_VN]`, `[REDACTED_CREDIT_CARD]`.
+- `submission/evidence/validate-logs-100.png` — kết quả cuối của `validate_logs.py`:
+  91 log record, 42 correlation ID, **0 PII leak**, 4/4 PASSED, **100/100**.
+
+Input gốc trong `data/sample_queries.jsonl` có PII thật (`student@vinuni.edu.vn`,
+`0987654321`, `4111 1111 1111 1111`); sau khi qua processor, log chỉ còn placeholder.
 
 ### Evidence trace waterfall
 
