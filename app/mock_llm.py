@@ -20,10 +20,14 @@ class FakeResponse:
     model: str
 
 
+from .tracing import observe
+
+
 class FakeLLM:
     def __init__(self, model: str = "claude-sonnet-4-5") -> None:
         self.model = model
 
+    @observe(as_type="span")
     def generate(self, prompt: str) -> FakeResponse:
         time.sleep(0.15)
         input_tokens = max(20, len(prompt) // 4)
@@ -35,3 +39,36 @@ class FakeLLM:
             "Use retrieved context and keep responses concise."
         )
         return FakeResponse(text=answer, usage=FakeUsage(input_tokens, output_tokens), model=self.model)
+
+
+import os
+import httpx
+
+
+class RealLLM:
+    def __init__(self, api_key: str, model: str = "gpt-4o-mini", base_url: str | None = None) -> None:
+        self.api_key = api_key
+        self.model = model
+        self.base_url = base_url or os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
+
+    @observe(as_type="span")
+    def generate(self, prompt: str) -> FakeResponse:
+        url = f"{self.base_url.rstrip('/')}/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "model": self.model,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.7,
+        }
+        with httpx.Client(timeout=30.0) as client:
+            resp = client.post(url, headers=headers, json=payload)
+            resp.raise_for_status()
+            data = resp.json()
+            answer = data["choices"][0]["message"]["content"]
+            usage_data = data.get("usage", {})
+            input_tokens = usage_data.get("prompt_tokens", len(prompt) // 4)
+            output_tokens = usage_data.get("completion_tokens", len(answer) // 4)
+            return FakeResponse(text=answer, usage=FakeUsage(input_tokens, output_tokens), model=self.model)

@@ -11,6 +11,9 @@ from .prompt_management import resolve_prompt
 from .tracing import get_langfuse_client, observe, tracing_enabled
 
 
+from structlog.contextvars import get_contextvars
+
+
 @dataclass
 class AgentResult:
     answer: str
@@ -21,10 +24,18 @@ class AgentResult:
     quality_score: float
 
 
+import os
+from .mock_llm import FakeLLM, RealLLM
+
+
 class LabAgent:
-    def __init__(self, model: str = "claude-sonnet-4-5") -> None:
-        self.model = model
-        self.llm = FakeLLM(model=model)
+    def __init__(self, model: str | None = None) -> None:
+        api_key = os.getenv("OPENAI_API_KEY") or os.getenv("LLM_API_KEY")
+        self.model = model or os.getenv("LLM_MODEL", "gpt-4o-mini" if api_key else "claude-sonnet-4-5")
+        if api_key:
+            self.llm = RealLLM(api_key=api_key, model=self.model)
+        else:
+            self.llm = FakeLLM(model=self.model)
 
     @observe(as_type="generation", capture_input=False, capture_output=False)
     def run(self, user_id: str, feature: str, session_id: str, message: str) -> AgentResult:
@@ -43,16 +54,21 @@ class LabAgent:
         latency_ms = int((time.perf_counter() - started) * 1000)
         cost_usd = self._estimate_cost(response.usage.input_tokens, response.usage.output_tokens)
 
+        trace_metadata = {
+            "prompt_name": prompt.name,
+            "prompt_label": prompt.label,
+            "prompt_version": prompt.version,
+            "prompt_source": prompt.source,
+        }
+        cid = get_contextvars().get("correlation_id")
+        if cid and cid != "MISSING":
+            trace_metadata["correlation_id"] = cid
+
         langfuse_client.update_current_trace(
             user_id=hash_user_id(user_id),
             session_id=session_id,
             tags=["lab", feature, self.model],
-            metadata={
-                "prompt_name": prompt.name,
-                "prompt_label": prompt.label,
-                "prompt_version": prompt.version,
-                "prompt_source": prompt.source,
-            },
+            metadata=trace_metadata,
         )
         langfuse_client.update_current_generation(
             model=self.model,
