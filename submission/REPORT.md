@@ -4,7 +4,7 @@
 
 - Tên nhóm: Zeztz
 - Repository URL: https://github.com/TranDuyKhanh20215213/Day13-K4-Zeztz
-- Commit SHA cuối: `9813093` *(cập nhật lại bằng `git rev-parse HEAD` nếu còn commit thêm)*
+- Commit SHA cuối: `9dda847` *(commit ngay trước commit cập nhật dòng này; lấy SHA mới nhất bằng `git rev-parse HEAD`)*
 - Thành viên và vai trò:
 
 | Vai trò | Họ tên | MSSV | Phạm vi phụ trách |
