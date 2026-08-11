@@ -75,4 +75,13 @@ Với mỗi thành viên, ghi rõ nhiệm vụ và link commit/PR tương ứng.
 
 | Thành viên | Phần việc | Commit/PR | Điều đã học |
 |---|---|---|---|
-| Phạm Nguyễn Khánh Minh | Hoàn thiện Correlation ID Middleware, PII Redaction, Langfuse Tracing, Managed Prompt Versioning, Dashboard 6 Panel, Alert Rules/Runbooks và Điều tra Challenge Incident | Main branch | Học cách xây dựng hệ thống Observability toàn trình cho AI API (Metrics, Traces, Structured Logs), quản lý Prompt Managed & Rollback, và kỹ năng quy vết nguyên nhân gốc rễ (Root Cause Analysis) qua Trace ID & Correlation ID. |
+| Phạm Nguyễn Khánh Minh | Hoàn thiện Correlation ID Middleware, PII Redaction, Langfuse Tracing, Managed Prompt Versioning, Dashboard 6 Panel, Alert Rules/Runbooks, Audit Logging System, Cost Optimization & Challenge Investigation | Main branch | Học cách xây dựng hệ thống Observability toàn trình cho AI API (Metrics, Traces, Structured Logs), quản lý Prompt Managed & Rollback, tối ưu hóa chi phí LLM, và kỹ năng quy vết nguyên nhân gốc rễ (Root Cause Analysis) qua Trace ID & Correlation ID. |
+
+## 8. Bonus điểm thưởng (Tối đa +10 điểm)
+
+- **1. Audit Log System riêng (`data/audit.jsonl`)**: Triển khai module `app/audit_logger.py` ghi vết bảo mật và quản trị độc lập (log các sự kiện `INCIDENT_ENABLED`, `INCIDENT_DISABLED`, `PII_REDATED`).
+- **2. Cost & Performance Optimization Analysis (Before / After)**: Triển khai script `scripts/cost_optimization_analysis.py` phân tích hiệu quả cắt giảm chi phí giữa Prompt v1 (dài dòng) và Prompt v2 (rõ ràng, ngắn gọn):
+  - **Giảm completion tokens**: từ 420 tokens xuống 65 tokens (**Giảm 84.5%**).
+  - **Tiết kiệm chi phí API**: từ $0.0064/req xuống $0.0011/req (**Tiết kiệm 82.8%**).
+  - **Cải thiện Latency**: từ 9800ms xuống 4200ms (**Nhanh hơn 57.1%**).
+  - Bằng chứng phân tích: `submission/evidence/cost_optimization_before_after.png`
