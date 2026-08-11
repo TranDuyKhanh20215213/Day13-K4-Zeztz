@@ -4,7 +4,7 @@
 
 - Tên nhóm: Day 13 K4 Observability - Phạm Nguyễn Khánh Minh
 - Repository URL: `https://github.com/pham-ng/Day13-K4-Observability-2A202602040-PhamNguyenKhanhMinh.git`
-- Commit SHA cuối: `8e8e328643fc6ebaf9f88c82ce08edee35fc06b4`
+- Commit SHA cuối: `696df5780ea39c63c7844078bdc3a52eec89e927`
 - Thành viên và vai trò: Phạm Nguyễn Khánh Minh (Nhóm trưởng & Phát triển Observability toàn trình)
 
 ## 2. Kết quả kỹ thuật
