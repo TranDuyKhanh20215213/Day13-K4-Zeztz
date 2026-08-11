@@ -9,7 +9,13 @@
 
 ## 2. Kết quả kỹ thuật
 
-- Điểm `validate_logs.py`:
+- Điểm `validate_logs.py`: **Baseline (Checkpoint 0): 30/100**
+  - Total log records analyzed: 21
+  - Records with missing required fields: 20
+  - Records with missing enrichment (context): 20
+  - Unique correlation IDs found: 0
+  - Potential PII leaks detected: 0
+  - Scorecard: [FAILED] Missing required fields, [FAILED] Correlation ID propagation, [FAILED] Log enrichment, [PASSED] PII scrubbing
 - Tổng số traces:
 - Số PII leak còn lại:
 - Link/đường dẫn dashboard:
