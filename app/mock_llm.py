@@ -58,10 +58,12 @@ class RealLLM:
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
         }
+        max_t = 100 if STATE.get("cost_spike") else 150
         payload = {
             "model": self.model,
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.7,
+            "max_tokens": max_t,
         }
         with httpx.Client(timeout=30.0) as client:
             resp = client.post(url, headers=headers, json=payload)
