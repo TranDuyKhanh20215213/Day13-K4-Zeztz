@@ -372,9 +372,7 @@ Hai khoảng `ts` cách nhau 2.66s trong khi phần sinh token không đổi ⇒
 | Lê Nhật Hoàng (C) | 2A202601128 | Metrics & Alerting — CP2: tích hợp Langfuse (traces + prompt v1/v2 + rollback), viết SLO, 4 alert rules và runbook; `scripts/setup_prompts.py`, `scripts/build_dashboard.py` | `239ae95`, `098211b` | Alert phải dựa trên triệu chứng người dùng chứ không phải tên hàm nội bộ. Ngưỡng cũng phải chọn từ số đo thật: đặt quá sát baseline thì kêu vì nhiễu, quá xa thì bỏ lọt sự cố — đúng lỗi mà CP3 phơi ra |
 | Phạm Nguyễn Khánh Minh (D) | 2A202602040 | QA & Incident Analyst — chạy load test sinh dữ liệu, thiết kế Dashboard Spec, chủ trì điều tra Challenge CP3, viết `REPORT.md`; `scripts/analyze_incident.py` | `a1759f9` | Cách chứng minh root cause mạnh nhất không phải chỉ ra cái gì thay đổi, mà chỉ ra cái gì **không** thay đổi: token và cost đứng yên trong khi latency tăng 17x đã loại trừ mọi giả thuyết trừ một |
 
-*Ghi chú:* tên tác giả trong git log (`KazuhaVN`, `hphat9824`, `HungBil`, `Hoang Le`) là
-tài khoản GitHub của các thành viên tương ứng ở trên. Commit `b95464c` và `4013676` là
-scaffold ban đầu của repo lab.
+*Ghi chú:* commit `b95464c` và `4013676` là scaffold ban đầu của repo lab.
 
 ## 8. Ghi chú kỹ thuật thêm — LLM provider
 
