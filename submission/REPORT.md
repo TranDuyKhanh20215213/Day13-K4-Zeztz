@@ -46,7 +46,8 @@ bind vào `structlog.contextvars` nên mọi log line phát sinh trong request �
 cùng ID mà không phải truyền tay qua từng hàm. ID cũng trả về client qua header
 `x-request-id`.
 
-Hai log line của cùng một request (`req-508f481a`) — nối được từ lúc nhận tới lúc trả lời:
+Hai log line của cùng một request (`req-508f481a`, lấy từ
+`data/logs-challenge-incident.jsonl`) — nối được từ lúc nhận tới lúc trả lời:
 
 ```json
 {"event": "request_received", "correlation_id": "req-508f481a", "user_id_hash": "0c04335fe098",
@@ -69,18 +70,26 @@ rõ `req-0953f0f7` và `req-71170b4a` mỗi ID xuất hiện ở **cả** `reque
 
 Processor `scrub_event` trong [`app/logging_config.py`](../app/logging_config.py) quét
 **đệ quy** toàn bộ `event_dict` (kể cả payload lồng nhau, list, tuple) chứ không chỉ
-một vài field cố định, nên không có đường nào để PII lọt qua mà không bị che.
+một vài field cố định, nên không còn phụ thuộc vào việc nhớ liệt kê đúng field khi thêm
+log mới. Giới hạn của cách này: nó vẫn dựa trên regex, nên chỉ che được các dạng PII đã
+được định nghĩa (email, số điện thoại VN, số thẻ) — dạng PII mới cần bổ sung pattern.
 
 Hai log line thật, input có PII nhưng log đã che:
 
 ```json
-{"event": "request_received", "correlation_id": "req-f628ca80", "feature": "qa",
+{"event": "request_received", "correlation_id": "req-7997ea07", "feature": "qa",
  "payload": {"message_preview": "What is your refund policy? My email is [REDACTED_EMAIL]"},
- "user_id_hash": "2055254ee30a", "session_id": "s01", "level": "info"}
-{"event": "request_received", "correlation_id": "req-3e8a7174", "feature": "qa",
+ "user_id_hash": "2055254ee30a", "session_id": "s01", "env": "dev",
+ "model": "claude-sonnet-4-5", "level": "info", "ts": "2026-08-11T10:50:43.516923Z"}
+{"event": "request_received", "correlation_id": "req-85113fd4", "feature": "qa",
  "payload": {"message_preview": "Here is my phone [REDACTED_PHONE_VN], what should be logged?"},
- "user_id_hash": "64f6ec689229", "session_id": "s05", "level": "info"}
+ "user_id_hash": "64f6ec689229", "session_id": "s05", "env": "dev",
+ "model": "claude-sonnet-4-5", "level": "info", "ts": "2026-08-11T10:50:44.883501Z"}
 ```
+
+Hai dòng này có thật trong `data/logs.jsonl` đã nộp và trùng với ảnh
+`logs-pii-redacted.png`, tra lại được bằng:
+`Select-String -Path data\logs.jsonl -Pattern 'req-7997ea07'`
 
 Ngoài ra `user_id` không bao giờ vào log ở dạng gốc — luôn là `user_id_hash`
 (ví dụ `2055254ee30a`). `validate_logs.py` báo **0 PII leak**.
@@ -381,10 +390,10 @@ Hai khoảng `ts` cách nhau 2.66s trong khi phần sinh token không đổi ⇒
 
 | Thành viên | MSSV | Phần việc | Commit | Điều đã học |
 |---|---|---|---|---|
-| Trần Duy Khánh (A) | 2A202601696 | Logging & Middleware — CP1: `CorrelationIdMiddleware`, bind correlation ID vào `structlog.contextvars`, gắn metadata (`user_id_hash`, `session_id`, `feature`, `model`, `env`) vào log | `7e9dfee`, `1b35d5a`, `7980dc8` | Bind context ở middleware giúp mọi log line trong một request tự mang correlation ID, không phải truyền tay qua từng hàm — đó là điều kiện để nối được log với trace về sau |
-| Nguyễn Hùng Phát (B) | 2A202601094 | Security & Compliance — CP1: bật processor che PII, cấu hình regex cho email/số điện thoại VN/số thẻ, nâng `scrub_event` thành quét đệ quy toàn bộ event | `aff4f19`, `7980dc8` | Che PII theo danh sách field cố định luôn có kẽ hở; quét đệ quy cả payload lồng nhau mới đảm bảo không lọt. Hash `user_id` thay vì ghi thẳng để vẫn nhóm được request theo người dùng mà không lưu danh tính |
+| Nguyễn Hùng Phát (A) | 2A202601094 | Logging & Middleware — CP1: `CorrelationIdMiddleware`, bind correlation ID vào `structlog.contextvars`, gắn metadata (`user_id_hash`, `session_id`, `feature`, `model`, `env`) vào log | `7e9dfee`, `1b35d5a` | Bind context ở middleware giúp mọi log line trong một request tự mang correlation ID, không phải truyền tay qua từng hàm — đó là điều kiện để nối được log với trace về sau |
+| Trần Duy Khánh (B) | 2A202601696 | Security & Compliance — CP1: bật processor che PII, cấu hình regex cho email/số điện thoại VN/số thẻ, nâng `scrub_event` thành quét đệ quy toàn bộ event | `7980dc8`, `aff4f19` | Che PII theo danh sách field cố định luôn có kẽ hở; quét đệ quy cả payload lồng nhau mới đảm bảo không lọt. Hash `user_id` thay vì ghi thẳng để vẫn nhóm được request theo người dùng mà không lưu danh tính |
 | Lê Nhật Hoàng (C) | 2A202601128 | Metrics & Alerting — CP2: tích hợp Langfuse (traces + prompt v1/v2 + rollback), viết SLO, 4 alert rules và runbook; `scripts/setup_prompts.py`, `scripts/build_dashboard.py` | `239ae95`, `098211b` | Alert phải dựa trên triệu chứng người dùng chứ không phải tên hàm nội bộ. Ngưỡng cũng phải chọn từ số đo thật: đặt quá sát baseline thì kêu vì nhiễu, quá xa thì bỏ lọt sự cố — đúng lỗi mà CP3 phơi ra |
-| Phạm Nguyễn Khánh Minh (D) | 2A202602040 | QA & Incident Analyst — chạy load test sinh dữ liệu, thiết kế Dashboard Spec, chủ trì điều tra Challenge CP3, viết `REPORT.md`; `scripts/analyze_incident.py` | `a1759f9` | Cách chứng minh root cause mạnh nhất không phải chỉ ra cái gì thay đổi, mà chỉ ra cái gì **không** thay đổi: token và cost đứng yên trong khi latency tăng 17x đã loại trừ mọi giả thuyết trừ một |
+| Phạm Nguyễn Khánh Minh (D) | 2A202602040 | QA & Incident Analyst — chạy load test sinh dữ liệu, thiết kế Dashboard Spec, chủ trì điều tra Challenge CP3, viết `REPORT.md`; `scripts/analyze_incident.py` | `a1759f9` | Chứng minh root cause không chỉ là chỉ ra cái gì thay đổi, mà cả cái gì **không** thay đổi: token và cost đứng yên trong khi latency tăng 17x giúp loại trừ hai giả thuyết (RAG trả nhiều document hơn, LLM sinh câu trả lời dài hơn) và thu hẹp về bước retrieve |
 
 *Ghi chú:* commit `b95464c` và `4013676` là scaffold ban đầu của repo lab.
 
