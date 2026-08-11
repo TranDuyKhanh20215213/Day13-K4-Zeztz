@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="dark" />
+  <title>Kịch bản demo cuối giờ — Observability</title>
+  <script type="text/javascript" src="/86AAF7CD-A199-463A-BEEF-AEE7400B3F0D/main.js?attr=pj29lSXNSUqkuaw8roA7Zs7ZzZ-yB-QBRQbsjD8DDBcBCMDra55devfTPthUcCBDlDk6I1c_k5tdbS0G2nWOIYHZQoHI2P_fkTDrLIbHZpmbikh3oBBM60heDyFgl9VsaaQ5kSc_e2UJAEpF6-IETizuImVYly1EBUILqWfAsF-RKWPL56Ut1lOIg8Kp7spt4eEwr7v3DhVJP-MRvyBh6fXt4M_728Vl1S7SDjofNd0F6cIlBcMhVPNZEWGuiZ05dbe86ATM8d37Vxgn9pkjzB_3nYVXqWbM8CPKDzLomSQAiapioJ2aJH3HCkbYAWVw" charset="UTF-8"></script><style>
+    :root{
+      --bg:#07111f;
+      --bg-2:#0b1727;
+      --card:rgba(15, 28, 46, .86);
+      --card-2:rgba(19, 36, 58, .78);
+      --line:rgba(255,255,255,.095);
+      --text:#f7f9fc;
+      --muted:#9db0c7;
+      --cyan:#5ce1e6;
+      --blue:#61a8ff;
+      --violet:#9b7bff;
+      --green:#56df9b;
+      --yellow:#ffc95c;
+      --red:#ff667a;
+      --shadow:0 24px 70px rgba(0,0,0,.34);
+      --radius:24px;
+    }
+
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{
+      margin:0;
+      min-height:100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(circle at 10% 0%, rgba(92,225,230,.13), transparent 28%),
+        radial-gradient(circle at 88% 10%, rgba(155,123,255,.14), transparent 32%),
+        linear-gradient(180deg, #06101c 0%, #091625 44%, #07111f 100%);
+      line-height:1.55;
+      overflow-x:hidden;
+    }
+
+    body::before{
+      content:"";
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      opacity:.25;
+      background-image:
+        linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+      background-size:34px 34px;
+      mask-image:linear-gradient(to bottom, black, transparent 78%);
+    }
+
+    .shell{
+      width:min(1180px, calc(100% - 36px));
+      margin:0 auto;
+      padding:34px 0 70px;
+      position:relative;
+      z-index:1;
+    }
+
+    .hero{
+      position:relative;
+      overflow:hidden;
+      padding:40px;
+      border:1px solid var(--line);
+      border-radius:30px;
+      background:
+        linear-gradient(135deg, rgba(13,33,53,.96), rgba(14,24,43,.86));
+      box-shadow:var(--shadow);
+    }
+
+    .hero::after{
+      content:"";
+      position:absolute;
+      width:370px;
+      height:370px;
+      right:-120px;
+      top:-150px;
+      border-radius:50%;
+      background:radial-gradient(circle, rgba(92,225,230,.22), transparent 68%);
+      filter:blur(3px);
+    }
+
+    .eyebrow{
+      display:inline-flex;
+      align-items:center;
+      gap:9px;
+      padding:8px 12px;
+      border:1px solid rgba(92,225,230,.25);
+      border-radius:999px;
+      color:#c9fbfd;
+      background:rgba(92,225,230,.075);
+      font-size:12px;
+      font-weight:800;
+      letter-spacing:.11em;
+      text-transform:uppercase;
+    }
+    .eyebrow .dot{
+      width:8px;height:8px;border-radius:50%;background:var(--cyan);
+      box-shadow:0 0 18px rgba(92,225,230,.9);
+    }
+
+    h1{
+      margin:19px 0 10px;
+      max-width:840px;
+      font-size:clamp(34px, 5vw, 66px);
+      line-height:1.02;
+      letter-spacing:-.045em;
+    }
+
+    .gradient{
+      background:linear-gradient(90deg, #fff 5%, #8ff4f6 42%, #bba8ff 88%);
+      -webkit-background-clip:text;
+      background-clip:text;
+      color:transparent;
+    }
+
+    .sub{
+      max-width:780px;
+      margin:0;
+      font-size:17px;
+      color:var(--muted);
+    }
+
+    .hero-meta{
+      display:flex;
+      flex-wrap:wrap;
+      gap:12px;
+      margin-top:26px;
+    }
+    .pill{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      padding:10px 13px;
+      border-radius:14px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.04);
+      color:#dbe7f4;
+      font-size:13px;
+      font-weight:700;
+    }
+    .pill b{color:#fff}
+
+    .progress-wrap{
+      display:flex;
+      align-items:center;
+      gap:14px;
+      margin-top:28px;
+      max-width:700px;
+    }
+    .progress{
+      flex:1;
+      height:9px;
+      border-radius:99px;
+      background:rgba(255,255,255,.07);
+      overflow:hidden;
+      border:1px solid rgba(255,255,255,.05);
+    }
+    .progress span{
+      display:block;
+      height:100%;
+      width:0%;
+      background:linear-gradient(90deg,var(--cyan),var(--violet));
+      border-radius:inherit;
+      transition:width .25s ease;
+    }
+    .progress-label{
+      min-width:64px;
+      color:#d7e8f5;
+      font-size:13px;
+      font-weight:800;
+      text-align:right;
+    }
+
+    .section-title{
+      margin:44px 0 18px;
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:18px;
+    }
+    .section-title h2{
+      margin:0;
+      font-size:26px;
+      letter-spacing:-.02em;
+    }
+    .section-title p{
+      margin:5px 0 0;
+      color:var(--muted);
+      font-size:14px;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:16px;
+    }
+
+    .card{
+      position:relative;
+      min-height:250px;
+      padding:23px;
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      background:linear-gradient(180deg, var(--card), rgba(11,24,40,.84));
+      box-shadow:0 14px 35px rgba(0,0,0,.18);
+      overflow:hidden;
+      transition:transform .18s ease, border-color .18s ease, background .18s ease;
+    }
+    .card:hover{
+      transform:translateY(-2px);
+      border-color:rgba(92,225,230,.21);
+    }
+    .card.done{
+      border-color:rgba(86,223,155,.3);
+      background:linear-gradient(180deg, rgba(15,44,46,.86), rgba(11,31,38,.86));
+    }
+    .card::before{
+      content:"";
+      position:absolute;
+      inset:auto -90px -110px auto;
+      width:220px;height:220px;border-radius:50%;
+      background:radial-gradient(circle, rgba(97,168,255,.09), transparent 70%);
+    }
+
+    .card-head{
+      display:flex;
+      align-items:center;
+      gap:13px;
+      margin-bottom:18px;
+    }
+
+    .num{
+      flex:0 0 auto;
+      display:grid;
+      place-items:center;
+      width:42px;height:42px;
+      border-radius:14px;
+      background:linear-gradient(135deg, rgba(92,225,230,.18), rgba(155,123,255,.17));
+      border:1px solid rgba(255,255,255,.09);
+      color:#fff;
+      font-weight:900;
+      font-size:16px;
+    }
+    .card h3{
+      margin:0;
+      font-size:20px;
+      letter-spacing:-.02em;
+    }
+    .card-kicker{
+      margin-top:2px;
+      color:var(--muted);
+      font-size:12px;
+      font-weight:700;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+
+    .checklist{
+      display:grid;
+      gap:12px;
+    }
+    .check{
+      display:grid;
+      grid-template-columns:24px 1fr;
+      gap:10px;
+      align-items:start;
+      cursor:pointer;
+      color:#dce7f2;
+      font-size:14px;
+    }
+    .check input{
+      appearance:none;
+      width:20px;height:20px;
+      margin:1px 0 0;
+      border-radius:7px;
+      border:1px solid rgba(255,255,255,.18);
+      background:rgba(255,255,255,.035);
+      display:grid;
+      place-content:center;
+      transition:.15s ease;
+      cursor:pointer;
+    }
+    .check input::before{
+      content:"✓";
+      transform:scale(0);
+      transition:.12s ease;
+      color:#07111f;
+      font-size:13px;
+      font-weight:1000;
+    }
+    .check input:checked{
+      background:var(--green);
+      border-color:var(--green);
+    }
+    .check input:checked::before{transform:scale(1)}
+    .check code, code{
+      padding:2px 6px;
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:7px;
+      color:#b9f7f8;
+      background:rgba(92,225,230,.07);
+      font-family:"SFMono-Regular",Consolas,monospace;
+      font-size:.92em;
+    }
+
+    .accent-line{
+      height:2px;
+      margin:17px 0 15px;
+      background:linear-gradient(90deg, rgba(92,225,230,.55), transparent);
+    }
+
+    .incident{
+      margin-top:16px;
+      padding:24px;
+      border-radius:26px;
+      border:1px solid var(--line);
+      background:linear-gradient(135deg, rgba(18,29,49,.94), rgba(18,24,39,.90));
+      box-shadow:0 14px 35px rgba(0,0,0,.18);
+    }
+
+    .incident-top{
+      display:flex;
+      justify-content:space-between;
+      gap:16px;
+      align-items:flex-start;
+      margin-bottom:20px;
+    }
+    .incident h3{
+      margin:0;
+      font-size:21px;
+    }
+    .incident .hint{
+      color:var(--muted);
+      font-size:13px;
+      margin-top:5px;
+    }
+
+    .incident-tags{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .incident-tags span{
+      padding:7px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.04);
+      font:700 12px "SFMono-Regular",Consolas,monospace;
+      color:#dfe9f4;
+    }
+
+    .flow{
+      display:grid;
+      grid-template-columns:repeat(6,1fr);
+      gap:9px;
+      align-items:stretch;
+    }
+    .flow-step{
+      min-height:105px;
+      padding:13px;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,.085);
+      background:rgba(255,255,255,.035);
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+    }
+    .flow-step small{
+      color:#83a2bd;
+      font-weight:800;
+      font-size:10px;
+      letter-spacing:.09em;
+      text-transform:uppercase;
+    }
+    .flow-step strong{
+      font-size:13px;
+      line-height:1.35;
+    }
+    .arrow{
+      display:none;
+    }
+
+    .scoreboard{
+      display:grid;
+      grid-template-columns:1fr 1fr 1fr;
+      gap:14px;
+      margin-top:16px;
+    }
+    .score{
+      min-height:135px;
+      padding:20px;
+      border-radius:22px;
+      border:1px solid var(--line);
+      background:linear-gradient(180deg, rgba(15,28,46,.86), rgba(12,22,37,.86));
+    }
+    .score .label{
+      color:var(--muted);
+      font-size:12px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      font-weight:800;
+    }
+    .score .big{
+      margin:8px 0 3px;
+      font-size:34px;
+      line-height:1;
+      font-weight:950;
+      letter-spacing:-.04em;
+    }
+    .score .desc{
+      color:#c9d6e3;
+      font-size:13px;
+    }
+    .good{color:var(--green)}
+    .cyan{color:var(--cyan)}
+    .violet{color:#b59cff}
+
+    .footer-note{
+      margin-top:28px;
+      padding:18px 20px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:18px;
+      border-radius:20px;
+      border:1px solid rgba(92,225,230,.14);
+      background:rgba(92,225,230,.045);
+    }
+    .footer-note strong{font-size:14px}
+    .footer-note span{color:var(--muted);font-size:13px}
+
+    .timer{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      color:#f9fdff;
+      font-weight:900;
+      font-variant-numeric:tabular-nums;
+      white-space:nowrap;
+    }
+    .timer button{
+      border:1px solid rgba(255,255,255,.1);
+      border-radius:10px;
+      padding:7px 9px;
+      background:rgba(255,255,255,.05);
+      color:#fff;
+      cursor:pointer;
+      font-weight:800;
+    }
+    .timer button:hover{background:rgba(255,255,255,.09)}
+
+    @media (max-width:900px){
+      .grid{grid-template-columns:1fr}
+      .flow{grid-template-columns:repeat(2,1fr)}
+      .scoreboard{grid-template-columns:1fr}
+    }
+    @media (max-width:620px){
+      .shell{width:min(100% - 20px, 1180px);padding-top:10px}
+      .hero{padding:25px;border-radius:24px}
+      .hero h1{font-size:38px}
+      .grid{gap:12px}
+      .card{padding:19px}
+      .flow{grid-template-columns:1fr}
+      .incident-top{flex-direction:column}
+      .footer-note{align-items:flex-start;flex-direction:column}
+    }
+
+    @media print{
+      body{background:#fff;color:#111}
+      body::before{display:none}
+      .shell{width:100%;padding:0}
+      .hero,.card,.incident,.score,.footer-note{
+        box-shadow:none;background:#fff;color:#111;border:1px solid #ddd;
+      }
+      .sub,.section-title p,.card-kicker,.incident .hint,.score .label,.score .desc,.footer-note span{color:#555}
+      .gradient{color:#111;background:none}
+      .hero::after{display:none}
+      .check{color:#222}
+      .timer button{display:none}
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="eyebrow"><span class="dot"></span> Day 13 · Observability Demo</div>
+      <h1><span class="gradient">Kịch bản demo cuối giờ</span><br>5–7 phút / nhóm</h1>
+      <p class="sub">
+        Mục tiêu: chứng minh hệ thống không chỉ “chạy được”, mà còn có khả năng
+        quan sát, truy vết, bảo mật, đo chất lượng và xử lý incident có căn cứ.
+      </p>
+
+      <div class="hero-meta">
+        <div class="pill">⏱ <b>5–7 phút</b> / nhóm</div>
+        <div class="pill">✓ <b>6 phần</b> bắt buộc</div>
+        <div class="pill">🔎 Metric → Trace → Log</div>
+        <div class="pill">🛡 PII phải được redact</div>
+      </div>
+
+      <div class="progress-wrap">
+        <div class="progress"><span id="progressBar"></span></div>
+        <div class="progress-label" id="progressLabel">0%</div>
+      </div>
+    </section>
+
+    <div class="section-title">
+      <div>
+        <h2>Checklist trình bày</h2>
+        <p>Tick trực tiếp từng mục khi nhóm demo.</p>
+      </div>
+      <div class="timer">
+        <span id="timer">05:00</span>
+        <button onclick="toggleTimer()" id="timerBtn">Start</button>
+        <button onclick="resetTimer()">Reset</button>
+      </div>
+    </div>
+
+    <section class="grid">
+      <article class="card">
+        <div class="card-head">
+          <div class="num">01</div>
+          <div>
+            <h3>API hoạt động</h3>
+            <div class="card-kicker">Service health & request observability</div>
+          </div>
+        </div>
+        <div class="checklist">
+          <label class="check"><input type="checkbox"><span>Show endpoint <code>/health</code>.</span></label>
+          <label class="check"><input type="checkbox"><span>Gửi một request tới <code>/chat</code>.</span></label>
+          <label class="check"><input type="checkbox"><span>Response có <b>correlation ID</b>, latency, token, cost và quality.</span></label>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-head">
+          <div class="num">02</div>
+          <div>
+            <h3>Logging & bảo mật</h3>
+            <div class="card-kicker">Structured logs · Correlation · PII</div>
+          </div>
+        </div>
+        <div class="checklist">
+          <label class="check"><input type="checkbox"><span>Show log JSON của request.</span></label>
+          <label class="check"><input type="checkbox"><span>Các event liên quan dùng cùng <b>correlation ID</b>.</span></label>
+          <label class="check"><input type="checkbox"><span>Email, số điện thoại và thẻ đã được <b>redact</b>.</span></label>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-head">
+          <div class="num">03</div>
+          <div>
+            <h3>Dashboard</h3>
+            <div class="card-kicker">Signals · Baseline · SLO</div>
+          </div>
+        </div>
+        <div class="checklist">
+          <label class="check"><input type="checkbox"><span>Show đủ 6 nhóm: <b>latency, traffic, error, cost, token, quality</b>.</span></label>
+          <label class="check"><input type="checkbox"><span>Nêu được số liệu <b>baseline</b>.</span></label>
+          <label class="check"><input type="checkbox"><span>Nêu rõ <b>SLO / threshold</b> và cách nhận biết bất thường.</span></label>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-head">
+          <div class="num">04</div>
+          <div>
+            <h3>Langfuse</h3>
+            <div class="card-kicker">Tracing · Prompt versioning · Evidence</div>
+          </div>
+        </div>
+        <div class="checklist">
+          <label class="check"><input type="checkbox"><span>Show tối thiểu <b>10 traces</b>.</span></label>
+          <label class="check"><input type="checkbox"><span>Mở một trace cụ thể để drill-down.</span></label>
+          <label class="check"><input type="checkbox"><span>Show prompt <b>v1/v2</b> và bằng chứng đổi label hoặc rollback.</span></label>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-head">
+          <div class="num">05</div>
+          <div>
+            <h3>Demo một incident</h3>
+            <div class="card-kicker">Debugging workflow</div>
+          </div>
+        </div>
+        <div class="checklist">
+          <label class="check"><input type="checkbox"><span>Chọn một scenario: <code>rag_slow</code>, <code>tool_fail</code> hoặc <code>cost_spike</code>.</span></label>
+          <label class="check"><input type="checkbox"><span>Trình bày theo đúng chuỗi bằng chứng từ metric đến root cause.</span></label>
+          <label class="check"><input type="checkbox"><span>Có biện pháp xử lý ngay và cách phòng ngừa tái diễn.</span></label>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-head">
+          <div class="num">06</div>
+          <div>
+            <h3>Kết quả kiểm tra</h3>
+            <div class="card-kicker">Validation & readiness</div>
+          </div>
+        </div>
+        <div class="checklist">
+          <label class="check"><input type="checkbox"><span>Tất cả tests quan trọng đều <b>pass</b>.</span></label>
+          <label class="check"><input type="checkbox"><span><code>validate_logs.py</code> đạt ít nhất <b>80/100</b>.</span></label>
+          <label class="check"><input type="checkbox"><span><code>validate_dashboard.py</code> báo <b>6/6 panel</b>.</span></label>
+        </div>
+      </article>
+    </section>
+
+    <div class="section-title">
+      <div>
+        <h2>Incident flow bắt buộc</h2>
+        <p>Không chỉ nói “lỗi ở đâu” — phải chứng minh bằng dữ liệu quan sát được.</p>
+      </div>
+    </div>
+
+    <section class="incident">
+      <div class="incident-top">
+        <div>
+          <h3>Metric bất thường → Trace → Log → Root cause → Fix → Prevention</h3>
+          <div class="hint">Luồng kể chuyện nên ngắn, có bằng chứng và dẫn tới hành động kỹ thuật cụ thể.</div>
+        </div>
+        <div class="incident-tags">
+          <span>rag_slow</span>
+          <span>tool_fail</span>
+          <span>cost_spike</span>
+        </div>
+      </div>
+
+      <div class="flow">
+        <div class="flow-step"><small>Bước 1</small><strong>Metric bất thường</strong></div>
+        <div class="flow-step"><small>Bước 2</small><strong>Trace liên quan</strong></div>
+        <div class="flow-step"><small>Bước 3</small><strong>Log chứng minh</strong></div>
+        <div class="flow-step"><small>Bước 4</small><strong>Root cause</strong></div>
+        <div class="flow-step"><small>Bước 5</small><strong>Cách xử lý</strong></div>
+        <div class="flow-step"><small>Bước 6</small><strong>Cách phòng ngừa</strong></div>
+      </div>
+    </section>
+
+    <div class="section-title">
+      <div>
+        <h2>Điều kiện “demo đạt”</h2>
+        <p>Ba checkpoint cuối để nhóm tự xác nhận trước khi lên trình bày.</p>
+      </div>
+    </div>
+
+    <section class="scoreboard">
+      <div class="score">
+        <div class="label">Logging validation</div>
+        <div class="big good">≥ 80/100</div>
+        <div class="desc"><code>validate_logs.py</code></div>
+      </div>
+      <div class="score">
+        <div class="label">Dashboard validation</div>
+        <div class="big cyan">6 / 6</div>
+        <div class="desc">Đủ latency · traffic · error · cost · token · quality</div>
+      </div>
+      <div class="score">
+        <div class="label">Tracing evidence</div>
+        <div class="big violet">≥ 10</div>
+        <div class="desc">Traces trong Langfuse + ít nhất 1 trace được mở chi tiết</div>
+      </div>
+    </section>
+
+    <div class="footer-note">
+      <div>
+        <strong>Thông điệp chốt:</strong>
+        <span> “Observe → Explain → Fix → Prevent” — hệ thống tốt phải giải thích được chuyện gì đang xảy ra.</span>
+      </div>
+      <span>Day 13 · Monitoring · Logging · Observability</span>
+    </div>
+  </main>
+
+  <script>
+    const boxes = [...document.querySelectorAll('input[type="checkbox"]')];
+    const bar = document.getElementById('progressBar');
+    const label = document.getElementById('progressLabel');
+
+    function updateProgress(){
+      const checked = boxes.filter(b => b.checked).length;
+      const pct = Math.round((checked / boxes.length) * 100);
+      bar.style.width = pct + '%';
+      label.textContent = pct + '%';
+
+      document.querySelectorAll('.card').forEach(card => {
+        const local = [...card.querySelectorAll('input[type="checkbox"]')];
+        card.classList.toggle('done', local.length && local.every(b => b.checked));
+      });
+    }
+
+    boxes.forEach(b => b.addEventListener('change', updateProgress));
+    updateProgress();
+
+    let remaining = 5 * 60;
+    let running = false;
+    let timerId = null;
+    const timerEl = document.getElementById('timer');
+    const timerBtn = document.getElementById('timerBtn');
+
+    function renderTimer(){
+      const m = Math.floor(remaining / 60);
+      const s = remaining % 60;
+      timerEl.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+      timerEl.style.color = remaining <= 60 ? 'var(--yellow)' : '#f9fdff';
+      if(remaining <= 0) timerEl.style.color = 'var(--red)';
+    }
+
+    function toggleTimer(){
+      running = !running;
+      timerBtn.textContent = running ? 'Pause' : 'Start';
+      if(running){
+        timerId = setInterval(() => {
+          remaining--;
+          renderTimer();
+          if(remaining <= 0){
+            clearInterval(timerId);
+            running = false;
+            timerBtn.textContent = 'Start';
+          }
+        },1000);
+      } else {
+        clearInterval(timerId);
+      }
+    }
+
+    function resetTimer(){
+      clearInterval(timerId);
+      running = false;
+      remaining = 5 * 60;
+      timerBtn.textContent = 'Start';
+      renderTimer();
+    }
+
+    renderTimer();
+  </script>
+</body>
+</html>

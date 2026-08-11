@@ -42,6 +42,11 @@ async def startup() -> None:
     )
 
 
+@app.get("/demo")
+async def demo_app() -> FileResponse:
+    return FileResponse("submission/demo_app.html")
+
+
 @app.get("/health")
 async def health() -> dict:
     return {"ok": True, "tracing_enabled": tracing_enabled(), "incidents": status()}
