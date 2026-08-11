@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 13 AI Observability</title>
+<style>
+  :root {
+    --bg:#f6f7f9; --fg:#14171c; --muted:#5b6472; --card:#fff;
+    --line:#dfe3e8; --ok:#1a7f4b; --bad:#c0392b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#14171c; --fg:#e8eaed; --muted:#9aa3b0; --card:#1c2028;
+             --line:#2c323c; --ok:#4ade80; --bad:#f87171; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:24px; background:var(--bg); color:var(--fg);
+         font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif; }
+  h1 { font-size:20px; margin:0 0 4px; }
+  .meta { color:var(--muted); font-size:13px; margin:0 0 20px; }
+  .meta code { background:var(--card); padding:1px 5px; border-radius:4px; }
+  .grid { display:grid; gap:14px; grid-template-columns:repeat(auto-fit,minmax(290px,1fr)); }
+  .card { background:var(--card); border:1px solid var(--line);
+           border-left:4px solid var(--ok); border-radius:10px; padding:14px 16px; }
+  .card.bad { border-left-color:var(--bad); }
+  header { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  h2 { font-size:15px; margin:0; }
+  .badge { font-size:11px; font-weight:700; letter-spacing:.4px;
+            color:var(--ok); border:1px solid var(--ok);
+            padding:2px 7px; border-radius:99px; white-space:nowrap; }
+  .card.bad .badge { color:var(--bad); border-color:var(--bad); }
+  .unit { color:var(--muted); font-size:12px; margin:3px 0 10px; }
+  .rows { display:flex; flex-direction:column; gap:4px; }
+  .row { display:flex; justify-content:space-between; gap:12px;
+          font-variant-numeric:tabular-nums; }
+  .row.sub { color:var(--muted); font-size:13px; padding-left:10px; }
+  .spark { width:100%; height:40px; margin-top:10px; display:block; }
+  .threshold { color:var(--muted); font-size:12px; margin:10px 0 0;
+                padding-top:9px; border-top:1px dashed var(--line); }
+</style>
+</head>
+<body>
+  <h1>Day 13 AI Observability</h1>
+  <p class="meta">
+    Time range: <strong>60 phút</strong> ·
+    Refresh: 30s ·
+    Nguồn: <code>data/logs.jsonl</code> ·
+    Cửa sổ dữ liệu: 08:40:16 → 08:40:40 UTC ·
+    40 log records · Sinh lúc 2026-08-11 08:44:25 UTC
+  </p>
+  <div class="grid">
+      <section class="card ok">
+        <header>
+          <h2>Latency percentiles</h2>
+          <span class="badge">ĐẠT</span>
+        </header>
+        <p class="unit">đơn vị: ms · n=20</p>
+        <div class="rows"><div class="row"><span>p50</span><strong>1,150</strong></div><div class="row"><span>p95</span><strong>1,547</strong></div><div class="row"><span>p99</span><strong>1,547</strong></div></div>
+        <svg class="spark" viewBox="0 0 260 40" preserveAspectRatio="none" role="img" aria-label="xu hướng 20 điểm"><polyline points="0.0,35.8 13.7,35.0 27.4,33.3 41.1,29.6 54.7,36.0 68.4,17.3 82.1,32.3 95.8,34.4 109.5,34.5 123.2,36.1 136.8,35.5 150.5,35.6 164.2,30.7 177.9,3.0 191.6,29.5 205.3,30.3 218.9,34.0 232.6,36.7 246.3,35.3 260.0,37.0" fill="none" stroke="var(--ok)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+        <p class="threshold">Threshold / SLO line: p95 ≤ 3,000 ms</p>
+      </section>
+      <section class="card bad">
+        <header>
+          <h2>Request traffic</h2>
+          <span class="badge">VƯỢT NGƯỠNG</span>
+        </header>
+        <p class="unit">đơn vị: requests_per_minute · n=20</p>
+        <div class="rows"><div class="row"><span>count</span><strong>20</strong></div><div class="row"><span>rate_per_minute</span><strong>0.33</strong></div></div>
+        
+        <p class="threshold">Threshold / SLO line: rate_per_minute ≥ 1 requests_per_minute</p>
+      </section>
+      <section class="card ok">
+        <header>
+          <h2>Error rate and breakdown</h2>
+          <span class="badge">ĐẠT</span>
+        </header>
+        <p class="unit">đơn vị: percent · n=20</p>
+        <div class="rows"><div class="row"><span>error_rate_pct</span><strong>0</strong></div><div class="row"><span>failed</span><strong>0</strong></div><div class="row"><span>received</span><strong>20</strong></div><div class="row sub"><span>không có lỗi</span><strong>0</strong></div></div>
+        
+        <p class="threshold">Threshold / SLO line: error_rate_pct ≤ 2 percent</p>
+      </section>
+      <section class="card ok">
+        <header>
+          <h2>Cost over time</h2>
+          <span class="badge">ĐẠT</span>
+        </header>
+        <p class="unit">đơn vị: usd · n=20</p>
+        <div class="rows"><div class="row"><span>total</span><strong>0.043</strong></div><div class="row"><span>avg_per_request</span><strong>0.0022</strong></div></div>
+        
+        <p class="threshold">Threshold / SLO line: total ≤ 2.5 usd</p>
+      </section>
+      <section class="card ok">
+        <header>
+          <h2>Input and output tokens</h2>
+          <span class="badge">ĐẠT</span>
+        </header>
+        <p class="unit">đơn vị: tokens · n=20</p>
+        <div class="rows"><div class="row"><span>tokens_in</span><strong>660</strong></div><div class="row"><span>tokens_out</span><strong>2,737</strong></div><div class="row"><span>total</span><strong>3,397</strong></div></div>
+        
+        <p class="threshold">Threshold / SLO line: sum_by_field ≤ 50,000 tokens</p>
+      </section>
+      <section class="card ok">
+        <header>
+          <h2>Quality proxy</h2>
+          <span class="badge">ĐẠT</span>
+        </header>
+        <p class="unit">đơn vị: score_0_to_1 · n=20</p>
+        <div class="rows"><div class="row"><span>mean</span><strong>0.88</strong></div></div>
+        <svg class="spark" viewBox="0 0 260 40" preserveAspectRatio="none" role="img" aria-label="xu hướng 20 điểm"><polyline points="0.0,37.0 13.7,3.0 27.4,37.0 41.1,3.0 54.7,3.0 68.4,3.0 82.1,3.0 95.8,3.0 109.5,3.0 123.2,3.0 136.8,3.0 150.5,37.0 164.2,37.0 177.9,3.0 191.6,3.0 205.3,3.0 218.9,3.0 232.6,3.0 246.3,3.0 260.0,3.0" fill="none" stroke="var(--ok)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+        <p class="threshold">Threshold / SLO line: mean ≥ 0.75 score_0_to_1</p>
+      </section></div>
+</body>
+</html>

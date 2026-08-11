@@ -4,13 +4,25 @@ slis:
   latency_p95_ms:
     objective: 3000
     target: 99.5
-    note: Replace with your group's target
+    note: >-
+      Baseline đo được P95 ≈ 1547 ms ở concurrency 2, nên ngưỡng 3000 ms cách
+      baseline khoảng 2x và không kêu vì nhiễu thường ngày. Khi bật incident
+      rag_slow, P95 lên 3797 ms và vượt ngưỡng đúng như mong đợi.
   error_rate_pct:
     objective: 2
     target: 99.0
+    note: >-
+      Baseline hiện tại 0%. Giữ objective 2% để còn error budget cho lỗi
+      thoáng qua; alert elevated_error_rate dùng đúng ngưỡng này.
   daily_cost_usd:
     objective: 2.5
     target: 100.0
+    note: >-
+      Chi phí thực đo ≈ $0.002/request. Ngưỡng $2.5/ngày tương đương khoảng
+      1250 request/ngày, đủ rộng cho lab và vẫn bắt được cost spike.
   quality_score_avg:
     objective: 0.75
     target: 95.0
+    note: >-
+      Quality proxy baseline 0.88. Ngưỡng 0.75 nằm dưới baseline một khoảng an
+      toàn nên chỉ kêu khi chất lượng giảm thật, không kêu vì dao động nhỏ.
