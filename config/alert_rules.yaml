@@ -17,3 +17,12 @@ alerts:
     type: symptom-based
     owner: team-lead
     runbook: docs/alerts.md#alert-3
+  # Bổ sung sau CP3: challenge day13-k4-observability-v1 cho thấy ngưỡng chung
+  # 3000ms bỏ lọt sự cố của feature vốn nhanh (P95 monitoring lên 2651ms mà
+  # high_latency_p95 không kêu). Ngưỡng 2000ms lấy theo config/challenge.json.
+  - name: high_latency_p95_monitoring
+    severity: warning
+    condition: "latency_p95 of feature 'monitoring' > 2000ms for 5 minutes"
+    type: symptom-based
+    owner: on-call-engineer
+    runbook: docs/alerts.md#alert-4

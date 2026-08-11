@@ -26,3 +26,12 @@ slis:
     note: >-
       Quality proxy baseline 0.88. Ngưỡng 0.75 nằm dưới baseline một khoảng an
       toàn nên chỉ kêu khi chất lượng giảm thật, không kêu vì dao động nhỏ.
+  latency_p95_ms_monitoring:
+    objective: 2000
+    target: 99.5
+    note: >-
+      Bổ sung sau CP3. Feature monitoring có baseline riêng ~150 ms, nhanh hơn
+      nhiều mặt bằng chung, nên ngưỡng chung 3000 ms bỏ lọt sự cố của nó: khi
+      chạy challenge day13-k4-observability-v1, P95 lên 2651 ms (chậm gấp ~17
+      lần baseline) mà alert chung vẫn im. Ngưỡng 2000 ms lấy theo
+      latency_threshold_ms trong config/challenge.json.

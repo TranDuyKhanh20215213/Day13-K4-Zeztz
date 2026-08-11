@@ -172,13 +172,123 @@ cụ thể thuộc về trace và log — chính là ba bước kiểm tra đầ
 
 ## 6. Điều tra challenge
 
-- Challenge ID:
-- Triệu chứng từ metrics:
-- Trace ID liên quan:
-- Log line/correlation ID liên quan:
-- Root cause:
-- Fix action:
-- Preventive measure:
+- **Challenge ID:** `day13-k4-observability-v1` (cohort K4, incident `rag_slow`,
+  affected feature `monitoring`, `latency_threshold_ms` = 2000)
+
+Quy trình chạy đúng theo README: chạy input chính thức **trước** khi bật incident để
+lấy baseline, rồi bật incident và chạy lại **cùng 5 query đó** — nên khác biệt duy nhất
+giữa hai lần là bản thân sự cố.
+
+```bash
+python scripts/load_test.py --challenge --concurrency 5   # baseline
+python scripts/inject_incident.py                          # bật rag_slow
+python scripts/load_test.py --challenge --concurrency 5   # incident
+python scripts/analyze_incident.py \
+    --logs data/logs-challenge-incident.jsonl \
+    --baseline data/logs-challenge-baseline.jsonl
+python scripts/inject_incident.py --disable
+```
+
+### Bước 1 — Triệu chứng từ metrics
+
+| Chỉ số (feature `monitoring`) | Baseline | Khi có incident | Ngưỡng |
+|---|---|---|---|
+| Latency P50 | 150 ms | **2651 ms** | — |
+| Latency P95 | 150 ms | **2651 ms** | 2000 ms |
+| Request vượt ngưỡng | 0/5 | **5/5 (100%)** | — |
+| Error rate | 0% | 0% | ≤ 2% |
+| Cost trung bình | $0.0021 | $0.0021 | — |
+| Quality | 0.84 | 0.84 | ≥ 0.75 |
+
+P95 tăng **+2501 ms** và vượt threshold 2000 ms, trong khi **error rate vẫn 0%, cost và
+quality không đổi**. Kết luận đầu tiên: đây là sự cố **độ trễ thuần tuý**, không phải lỗi
+chức năng và không phải hồi quy chi phí. Điều đó thu hẹp phạm vi điều tra về "thời gian bị
+tiêu ở đâu" thay vì "cái gì hỏng".
+
+### Bước 2 — Dùng trace khoanh vùng span bất thường
+
+Vì chạy cùng 5 query ở cả hai lần, Langfuse có **hai trace cho mỗi session** — so sánh
+trực tiếp được:
+
+| Session | Trace baseline | Latency | Trace incident | Latency |
+|---|---|---|---|---|
+| `k4-challenge-s05` | `ee33562437760f945296589e9d1037b4` | 0.15s | **`f8de5335b0ef4ad48652dfed8dc9b380`** | **2.66s** |
+| `k4-challenge-s04` | `a38a133e45eef0f96e5499f7078df2d4` | 0.15s | `17bd1e7e5b781893293f734007a45baa` | 2.65s |
+| `k4-challenge-s03` | `ef5f4fa8658db3d99680780e2f2dd7be` | 0.15s | `ea9a143923b04a488eccce4820f4946d` | 2.65s |
+| `k4-challenge-s02` | `1a3fd7f4ece63f930209df1c330c6a15` | 0.15s | `9edc2862bd3f90e0bcb4a7ffac030f0f` | 2.65s |
+| `k4-challenge-s01` | `373f95b3d2c1db7c60c948b18da44446` | 0.15s | `bbdaffae5728ffec860e4829ebdb63c0` | 2.65s |
+
+Trace chậm nhất: **`f8de5335b0ef4ad48652dfed8dc9b380`**
+
+Điểm mấu chốt: **cả 5 trace đều chậm đúng ~2.5s**, không phải phân tán ngẫu nhiên. Độ trễ
+cố định như vậy loại trừ nguyên nhân tranh chấp tài nguyên hay nghẽn mạng (những thứ này
+gây dao động), và chỉ tới một khoảng chờ cố định nằm trong đường xử lý. Trong span `run`,
+thời gian dồn vào bước `retrieve` (RAG) chứ không phải `generate` (LLM) — vì `generate`
+vẫn sinh ra đúng lượng token như baseline.
+
+### Bước 3 — Dùng log chứng minh root cause
+
+Log line của request chậm nhất (`correlation_id=req-508f481a`, session `k4-challenge-s05`):
+
+```json
+{"event": "request_received", "correlation_id": "req-508f481a", "user_id_hash": "0c04335fe098",
+ "feature": "monitoring", "session_id": "k4-challenge-s05", "model": "claude-sonnet-4-5",
+ "level": "info", "ts": "2026-08-11T10:25:49.422430Z"}
+{"event": "response_sent", "correlation_id": "req-508f481a", "latency_ms": 2651,
+ "tokens_in": 45, "tokens_out": 81, "cost_usd": 0.00135, "quality_score": 0.8,
+ "user_id_hash": "0c04335fe098", "feature": "monitoring", "session_id": "k4-challenge-s05",
+ "model": "claude-sonnet-4-5", "level": "info", "ts": "2026-08-11T10:25:52.082973Z"}
+```
+
+Hai bằng chứng loại trừ trong chính log này:
+
+1. **`tokens_in` = 45**, phân bố toàn bộ 10 request là `{44, 45, 46}` — không đổi so với
+   baseline. Nếu RAG trả về nhiều document hơn thì prompt phải dài ra và `tokens_in` phải
+   tăng. Nó không tăng ⇒ độ trễ **không** đến từ khối lượng dữ liệu.
+2. **`cost_usd` và `tokens_out` không đổi** ⇒ LLM làm đúng lượng việc như cũ ⇒ độ trễ
+   **không** nằm ở bước sinh câu trả lời.
+
+Hai khoảng `ts` cách nhau 2.66s trong khi phần sinh token không đổi ⇒ thời gian bị tiêu
+**trước** khi gọi LLM, tức ở bước retrieve.
+
+- **Root cause:** bước RAG `retrieve()` bị chèn một khoảng chờ cố định ~2.5 giây
+  (`time.sleep(2.5)` trong [`app/mock_rag.py`](../app/mock_rag.py) khi cờ incident
+  `rag_slow` bật). Mỗi request đều phải chờ hết khoảng này trước khi prompt được gửi sang
+  LLM, nên toàn bộ độ trễ dôi ra là hằng số chứ không tỉ lệ với kích thước dữ liệu.
+  Con số đo được (+2501 ms) khớp với khoảng chờ này.
+
+- **Fix action:** tắt cờ incident (`python scripts/inject_incident.py --disable`), xác nhận
+  `/health` trả `rag_slow: false`. Trong hệ thống thật, việc tương đương là gỡ khoảng chờ
+  nhân tạo / sửa truy vấn vector store bị chậm, và đặt **timeout cho bước retrieve** để một
+  dependency chậm không kéo dài toàn bộ request. Sau khi tắt, P95 trở lại ~150 ms.
+
+- **Preventive measure:**
+  1. **Tách span cho từng thành phần** — gắn `@observe(as_type="span")` lên `retrieve` và
+     `generate` (phần mở rộng trong tài liệu lab) để waterfall chỉ thẳng ra span nào chậm,
+     không phải suy luận gián tiếp từ token như lần này.
+  2. **Thêm SLO theo từng feature** — đây là lỗ hổng thật mà challenge này phơi ra:
+     alert `high_latency_p95` hiện đặt ngưỡng 3000 ms (dựa trên baseline toàn hệ thống
+     ~1200 ms), trong khi sự cố lần này chỉ đẩy P95 lên **2651 ms** — tức là
+     **alert KHÔNG kêu** dù feature `monitoring` đã vượt threshold riêng 2000 ms của nó
+     và người dùng của feature đó chờ chậm gấp 17 lần bình thường. Một ngưỡng chung cho
+     mọi feature sẽ luôn bỏ lọt sự cố của feature vốn nhanh hơn mặt bằng.
+
+     **Đã khắc phục ngay trong repo** (không chỉ ghi nhận): thêm SLI
+     `latency_p95_ms_monitoring` (objective 2000 ms) vào
+     [`config/slo.yaml`](../config/slo.yaml), alert `high_latency_p95_monitoring` vào
+     [`config/alert_rules.yaml`](../config/alert_rules.yaml) và runbook Alert 4 tương
+     ứng trong [`docs/alerts.md`](../docs/alerts.md). Với cấu hình mới, đúng sự cố này
+     sẽ được phát hiện thay vì im lặng.
+  3. **Timeout + fallback ở bước retrieve** — nếu vector store không trả lời trong N ms thì
+     trả về kết quả rỗng và để LLM dùng fallback, đổi một câu trả lời kém hơn lấy việc giữ
+     được độ trễ.
+  4. **Theo dõi tỉ lệ latency/token** — lần này token không đổi mà latency tăng gấp 17 lần;
+     một biểu đồ "ms mỗi token" sẽ phát hiện bất thường kiểu này ngay cả khi độ trễ tuyệt
+     đối còn dưới ngưỡng.
+
+- **Evidence:** `data/logs-challenge-baseline.jsonl` và `data/logs-challenge-incident.jsonl`
+  (log thô hai lần chạy), cùng output của `scripts/analyze_incident.py` — script tự nối
+  Metrics → Traces → Logs và in ra kết luận ở trên.
 
 ## 7. Đóng góp cá nhân
 

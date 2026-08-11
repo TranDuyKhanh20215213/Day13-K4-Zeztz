@@ -49,6 +49,22 @@ Baseline đo được (40 request, không có incident): P95 ≈ 1213 ms, error 
 - Mitigation tạm thời: rollback prompt về version có chi phí thấp hơn, giảm số document RAG, hoặc đặt trần `max_tokens`. Nếu do lưu lượng tăng thật thì nâng ngân sách có chủ đích thay vì tắt alert.
 - Owner: team-lead
 
+## Alert 4
+
+Bổ sung sau khi điều tra challenge `day13-k4-observability-v1`. Lý do: sự cố đó đẩy P95 của feature `monitoring` lên 2651 ms — chậm gấp ~17 lần baseline của chính feature này (150 ms) — nhưng vẫn nằm dưới ngưỡng chung 3000 ms nên Alert 1 không kêu. Một ngưỡng chung cho mọi feature sẽ luôn bỏ lọt sự cố của feature vốn nhanh hơn mặt bằng.
+
+- Tên: `high_latency_p95_monitoring`
+- Severity: warning
+- SLI/SLO liên quan: `latency_p95_ms` giới hạn trong `feature = monitoring`, objective 2000 ms (lấy theo `latency_threshold_ms` trong `config/challenge.json`)
+- Điều kiện và thời gian duy trì: `latency_p95` của feature `monitoring` > 2000 ms duy trì 5 phút.
+- Ảnh hưởng tới người dùng: người dùng của feature `monitoring` chờ lâu bất thường trong khi phần còn lại của hệ thống vẫn bình thường — dạng sự cố dễ bị bỏ sót nhất vì metric tổng vẫn đẹp.
+- Ba bước kiểm tra đầu tiên:
+  1. Trên `/metrics`, so sánh P95 của `monitoring` với P95 toàn hệ thống. Nếu chỉ một feature tăng thì khoanh vùng ngay vào đường xử lý riêng của feature đó.
+  2. Mở Langfuse, lọc trace theo `feature=monitoring` trong khoảng thời gian alert, sắp xếp theo duration giảm dần. Kiểm tra xem độ trễ có **cố định** hay dao động — độ trễ cố định chỉ tới một khoảng chờ trong code, dao động chỉ tới tranh chấp tài nguyên.
+  3. Trong `data/logs.jsonl`, lọc `event=response_sent` và `feature=monitoring`, đối chiếu `latency_ms` với `tokens_in`/`tokens_out`. Token không đổi mà latency tăng ⇒ nghẽn ở bước retrieve chứ không phải sinh câu trả lời.
+- Mitigation tạm thời: đặt timeout cho bước retrieve và cho phép fallback về câu trả lời không có document, đổi chất lượng lấy độ trễ; nếu chỉ một feature bị ảnh hưởng thì tạm định tuyến feature đó sang đường xử lý không dùng RAG.
+- Owner: on-call-engineer
+
 ## Vì sao alert dựa trên triệu chứng
 
 Ba alert trên đều đo thứ người dùng cảm nhận được — chờ lâu, gặp lỗi, dịch vụ có nguy cơ bị cắt — chứ không đo tên hàm hay thành phần nội bộ (ví dụ `retrieve() chậm` hay `FakeLLM lỗi`).
