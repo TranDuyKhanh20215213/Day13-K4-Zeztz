@@ -1,14 +1,26 @@
 from __future__ import annotations
 
+import os
 import time
 from dataclasses import dataclass
 
 from . import metrics
 from .mock_llm import FakeLLM
 from .mock_rag import retrieve
+from .openai_llm import OpenAILLM, price_for
 from .pii import hash_user_id, summarize_text
 from .prompt_management import resolve_prompt
 from .tracing import get_langfuse_client, observe, tracing_enabled
+
+# Provider mặc định là fake để public tests và bài chấm chạy được offline,
+# không tốn phí và cho kết quả tái lập. Đặt LLM_PROVIDER=openai trong .env
+# để dùng model thật.
+DEFAULT_PROVIDER = "fake"
+FAKE_MODEL = "claude-sonnet-4-5"
+
+
+def _provider() -> str:
+    return os.getenv("LLM_PROVIDER", DEFAULT_PROVIDER).strip().lower()
 
 
 @dataclass
@@ -22,9 +34,14 @@ class AgentResult:
 
 
 class LabAgent:
-    def __init__(self, model: str = "claude-sonnet-4-5") -> None:
-        self.model = model
-        self.llm = FakeLLM(model=model)
+    def __init__(self, model: str | None = None, provider: str | None = None) -> None:
+        self.provider = (provider or _provider()).lower()
+        if self.provider == "openai":
+            self.llm = OpenAILLM(model=model)
+            self.model = self.llm.model
+        else:
+            self.model = model or FAKE_MODEL
+            self.llm = FakeLLM(model=self.model)
 
     @observe(as_type="generation", capture_input=False, capture_output=False)
     def run(self, user_id: str, feature: str, session_id: str, message: str) -> AgentResult:
@@ -46,7 +63,7 @@ class LabAgent:
         langfuse_client.update_current_trace(
             user_id=hash_user_id(user_id),
             session_id=session_id,
-            tags=["lab", feature, self.model],
+            tags=["lab", feature, self.model, f"provider:{self.provider}"],
             metadata={
                 "prompt_name": prompt.name,
                 "prompt_label": prompt.label,
@@ -64,6 +81,8 @@ class LabAgent:
                 "prompt_version": prompt.version,
                 "prompt_source": prompt.source,
                 "prompt_fetch_error": prompt.fetch_error,
+                "llm_provider": self.provider,
+                "finish_reason": getattr(response, "finish_reason", None),
             },
             usage_details={
                 "prompt_tokens": response.usage.input_tokens,
@@ -91,8 +110,14 @@ class LabAgent:
         )
 
     def _estimate_cost(self, tokens_in: int, tokens_out: int) -> float:
-        input_cost = (tokens_in / 1_000_000) * 3
-        output_cost = (tokens_out / 1_000_000) * 15
+        if self.provider == "openai":
+            price = price_for(self.model)
+            input_rate, output_rate = price["input"], price["output"]
+        else:
+            # Giá tham chiếu của Claude Sonnet, giữ nguyên như bản gốc của lab
+            input_rate, output_rate = 3, 15
+        input_cost = (tokens_in / 1_000_000) * input_rate
+        output_cost = (tokens_out / 1_000_000) * output_rate
         return round(input_cost + output_cost, 6)
 
     def _heuristic_quality(self, question: str, answer: str, docs: list[str]) -> float:

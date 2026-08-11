@@ -2,10 +2,17 @@
 
 ## 1. Thông tin nhóm
 
-- Tên nhóm:
-- Repository URL:
-- Commit SHA cuối:
+- Tên nhóm: Zeztz
+- Repository URL: https://github.com/TranDuyKhanh20215213/Day13-K4-Zeztz
+- Commit SHA cuối: *(điền SHA của commit cuối cùng trước khi nộp — lấy bằng `git rev-parse HEAD`)*
 - Thành viên và vai trò:
+
+| Vai trò | Họ tên | MSSV | Phạm vi phụ trách |
+|---|---|---|---|
+| A — Logging & Middleware | Trần Duy Khánh | 2A202601696 | CP1: middleware, correlation ID, gắn metadata vào log |
+| B — Security & Compliance | Nguyễn Hùng Phát | 2A202601094 | CP1: bật processor che PII, cấu hình regex, nâng cấp che PII toàn cục |
+| C — Metrics & Alerting | Lê Nhật Hoàng | 2A202601128 | CP2: tích hợp Langfuse, đo `error_rate_pct`, viết SLO, alert rules và runbook |
+| D — QA & Incident Analyst | Phạm Nguyễn Khánh Minh | 2A202602040 | Chạy load test sinh dữ liệu, thiết kế Dashboard Spec, chủ trì điều tra Challenge (CP3), viết `REPORT.md` |
 
 ## 2. Kết quả kỹ thuật
 
@@ -31,10 +38,68 @@
 
 ## 3. Logging và tracing
 
-- Evidence correlation ID:
-- Evidence PII redaction:
-- Evidence trace waterfall:
-- Giải thích một span đáng chú ý:
+### Evidence correlation ID
+
+Mỗi request nhận một correlation ID ở middleware ([`app/middleware.py`](../app/middleware.py)),
+bind vào `structlog.contextvars` nên mọi log line phát sinh trong request đó đều mang
+cùng ID mà không phải truyền tay qua từng hàm. ID cũng trả về client qua header
+`x-request-id`.
+
+Hai log line của cùng một request (`req-508f481a`) — nối được từ lúc nhận tới lúc trả lời:
+
+```json
+{"event": "request_received", "correlation_id": "req-508f481a", "user_id_hash": "0c04335fe098",
+ "feature": "monitoring", "session_id": "k4-challenge-s05", "model": "claude-sonnet-4-5",
+ "env": "dev", "service": "api", "level": "info", "ts": "2026-08-11T10:25:49.422430Z"}
+{"event": "response_sent", "correlation_id": "req-508f481a", "latency_ms": 2651,
+ "tokens_in": 45, "tokens_out": 81, "cost_usd": 0.00135, "quality_score": 0.8,
+ "user_id_hash": "0c04335fe098", "feature": "monitoring", "session_id": "k4-challenge-s05",
+ "model": "claude-sonnet-4-5", "level": "info", "ts": "2026-08-11T10:25:52.082973Z"}
+```
+
+Kết quả `validate_logs.py`: **10 unique correlation ID / 10 request**, 0 record thiếu
+trường bắt buộc, 0 record thiếu metadata enrichment.
+
+### Evidence PII redaction
+
+Processor `scrub_event` trong [`app/logging_config.py`](../app/logging_config.py) quét
+**đệ quy** toàn bộ `event_dict` (kể cả payload lồng nhau, list, tuple) chứ không chỉ
+một vài field cố định, nên không có đường nào để PII lọt qua mà không bị che.
+
+Hai log line thật, input có PII nhưng log đã che:
+
+```json
+{"event": "request_received", "correlation_id": "req-f628ca80", "feature": "qa",
+ "payload": {"message_preview": "What is your refund policy? My email is [REDACTED_EMAIL]"},
+ "user_id_hash": "2055254ee30a", "session_id": "s01", "level": "info"}
+{"event": "request_received", "correlation_id": "req-3e8a7174", "feature": "qa",
+ "payload": {"message_preview": "Here is my phone [REDACTED_PHONE_VN], what should be logged?"},
+ "user_id_hash": "64f6ec689229", "session_id": "s05", "level": "info"}
+```
+
+Ngoài ra `user_id` không bao giờ vào log ở dạng gốc — luôn là `user_id_hash`
+(ví dụ `2055254ee30a`). `validate_logs.py` báo **0 PII leak**.
+
+### Evidence trace waterfall
+
+`submission/evidence/trace-waterfall-2.png` — trace `e115ff2e810e493fc72c6566d90871b7`,
+waterfall hiển thị span cha `prompt-check-candidate` chứa span `run` (0.15s, $0.002427),
+panel Metadata bên phải hiện `prompt_source=langfuse`, `prompt_version=2`,
+`prompt_label=candidate`, `prompt_name=day13-chat`, kèm Session ID và User ID đã hash.
+
+### Giải thích một span đáng chú ý
+
+Span đáng chú ý nhất là `run` của trace **`f8de5335b0ef4ad48652dfed8dc9b380`**
+(session `k4-challenge-s05`, lúc điều tra challenge): **2.66 giây**, trong khi cùng
+session đó ở lần chạy baseline chỉ **0.15 giây** — chậm gấp ~17 lần.
+
+Điều làm span này có giá trị chẩn đoán không nằm ở việc nó chậm, mà ở **những gì không
+đổi**: `tokens_in` = 45 (y hệt baseline), `tokens_out` = 81, `cost_usd` = $0.00135. Nếu
+nguyên nhân là RAG trả về nhiều document hơn thì prompt phải dài ra và `tokens_in` phải
+tăng; nếu nguyên nhân là LLM sinh câu trả lời dài hơn thì `tokens_out` và cost phải tăng.
+Cả ba đều đứng yên, nên thời gian dôi ra không nằm ở khối lượng công việc mà ở một
+khoảng **chờ** — và khoảng chờ đó xảy ra trước khi prompt được gửi đi, tức trong bước
+`retrieve`. Chi tiết ở mục 6.
 
 ## 4. Prompt versioning
 
@@ -123,8 +188,8 @@ lại gần như không đổi — cho thấy `rag_slow` chỉ ảnh hưởng đ
 hay đội chi phí, đúng bản chất của sự cố này.
 
 Panel Traffic báo VƯỢT NGƯỠNG là đúng về mặt tính toán chứ không phải lỗi: contract
-yêu cầu ≥ 1 request/phút, trong khi load test chỉ gửi 10–20 request rồi dừng nên chia
-cho cửa sổ 60 phút ra 0.33. Đây là đặc thù của lab chạy theo đợt, không phải dịch vụ
+yêu cầu ≥ 1 request/phút, trong khi load test chỉ gửi 40 request rồi dừng nên chia
+cho cửa sổ 60 phút ra 0.67. Đây là đặc thù của lab chạy theo đợt, không phải dịch vụ
 chạy liên tục.
 
 Kiểm tra runtime theo `DASHBOARD_SETUP.md`: bật `rag_slow` → chạy lại cùng input và
@@ -140,10 +205,13 @@ Ghi trong `config/slo.yaml` kèm `note` cho từng SLI:
 - `error_rate_pct` = 2%, target 99.0% — baseline 0%, giữ error budget cho lỗi thoáng qua.
 - `daily_cost_usd` = $2.5 — chi phí thực ≈ $0.002/request, tương đương ~1250 request/ngày.
 - `quality_score_avg` = 0.75 — baseline 0.88, ngưỡng nằm dưới một khoảng an toàn.
+- `latency_p95_ms_monitoring` = 2000 ms — **bổ sung sau CP3**. Feature `monitoring` có
+  baseline riêng ~150 ms, nhanh hơn nhiều mặt bằng chung, nên phải có ngưỡng riêng thay vì
+  dùng chung 3000 ms. Giá trị lấy theo `latency_threshold_ms` trong `config/challenge.json`.
 
 ### Alert rules và runbook
 
-`config/alert_rules.yaml` có 3 alert, đều `type: symptom-based`, mỗi alert trỏ tới một
+`config/alert_rules.yaml` có 4 alert, đều `type: symptom-based`, mỗi alert trỏ tới một
 mục runbook trong `docs/alerts.md`:
 
 | Alert | Severity | Điều kiện | Owner |
@@ -151,8 +219,12 @@ mục runbook trong `docs/alerts.md`:
 | `high_latency_p95` | warning | `latency_p95 > 3000ms` trong 5 phút | on-call-engineer |
 | `elevated_error_rate` | critical | `error_rate_pct > 2` trong 3 phút | on-call-engineer |
 | `cost_budget_exceeded` | warning | `daily_cost_usd > 2.5` | team-lead |
+| `high_latency_p95_monitoring` | warning | `latency_p95` của feature `monitoring` > 2000ms trong 5 phút | on-call-engineer |
 
-`docs/alerts.md` điền đủ cho cả 3 alert: tên, severity, SLI/SLO liên quan, điều kiện và
+Ba alert đầu viết ở CP2. Alert thứ tư **bổ sung sau CP3**, vì challenge phơi ra rằng
+ngưỡng chung 3000 ms bỏ lọt sự cố của feature vốn nhanh — chi tiết ở mục 6.
+
+`docs/alerts.md` điền đủ cho cả 4 alert: tên, severity, SLI/SLO liên quan, điều kiện và
 thời gian duy trì, ảnh hưởng tới người dùng, **ba bước kiểm tra đầu tiên**, mitigation
 tạm thời và owner.
 
@@ -292,8 +364,48 @@ Hai khoảng `ts` cách nhau 2.66s trong khi phần sinh token không đổi ⇒
 
 ## 7. Đóng góp cá nhân
 
-Với mỗi thành viên, ghi rõ nhiệm vụ và link commit/PR tương ứng.
+| Thành viên | MSSV | Phần việc | Commit | Điều đã học |
+|---|---|---|---|---|
+| Trần Duy Khánh (A) | 2A202601696 | Logging & Middleware — CP1: `CorrelationIdMiddleware`, bind correlation ID vào `structlog.contextvars`, gắn metadata (`user_id_hash`, `session_id`, `feature`, `model`, `env`) vào log | `7e9dfee`, `1b35d5a`, `7980dc8` | Bind context ở middleware giúp mọi log line trong một request tự mang correlation ID, không phải truyền tay qua từng hàm — đó là điều kiện để nối được log với trace về sau |
+| Nguyễn Hùng Phát (B) | 2A202601094 | Security & Compliance — CP1: bật processor che PII, cấu hình regex cho email/số điện thoại VN/số thẻ, nâng `scrub_event` thành quét đệ quy toàn bộ event | `aff4f19`, `7980dc8` | Che PII theo danh sách field cố định luôn có kẽ hở; quét đệ quy cả payload lồng nhau mới đảm bảo không lọt. Hash `user_id` thay vì ghi thẳng để vẫn nhóm được request theo người dùng mà không lưu danh tính |
+| Lê Nhật Hoàng (C) | 2A202601128 | Metrics & Alerting — CP2: tích hợp Langfuse (traces + prompt v1/v2 + rollback), viết SLO, 4 alert rules và runbook; `scripts/setup_prompts.py`, `scripts/build_dashboard.py` | `239ae95`, `098211b` | Alert phải dựa trên triệu chứng người dùng chứ không phải tên hàm nội bộ. Ngưỡng cũng phải chọn từ số đo thật: đặt quá sát baseline thì kêu vì nhiễu, quá xa thì bỏ lọt sự cố — đúng lỗi mà CP3 phơi ra |
+| Phạm Nguyễn Khánh Minh (D) | 2A202602040 | QA & Incident Analyst — chạy load test sinh dữ liệu, thiết kế Dashboard Spec, chủ trì điều tra Challenge CP3, viết `REPORT.md`; `scripts/analyze_incident.py` | `a1759f9` | Cách chứng minh root cause mạnh nhất không phải chỉ ra cái gì thay đổi, mà chỉ ra cái gì **không** thay đổi: token và cost đứng yên trong khi latency tăng 17x đã loại trừ mọi giả thuyết trừ một |
 
-| Thành viên | Phần việc | Commit/PR | Điều đã học |
-|---|---|---|---|
-| | | | |
+*Ghi chú:* tên tác giả trong git log (`KazuhaVN`, `hphat9824`, `HungBil`, `Hoang Le`) là
+tài khoản GitHub của các thành viên tương ứng ở trên. Commit `b95464c` và `4013676` là
+scaffold ban đầu của repo lab.
+
+## 8. Ghi chú kỹ thuật thêm — LLM provider
+
+Ngoài phạm vi bắt buộc của lab, app hỗ trợ chạy bằng **LLM thật của OpenAI** bên cạnh
+LLM giả có sẵn. Chọn provider bằng biến môi trường:
+
+```dotenv
+LLM_PROVIDER=fake     # mặc định: chạy offline, miễn phí, kết quả tái lập
+LLM_PROVIDER=openai   # gọi API thật
+OPENAI_API_KEY=sk-...
+OPENAI_MODEL=gpt-4o-mini
+```
+
+- [`app/openai_llm.py`](../app/openai_llm.py) — lớp `OpenAILLM` giữ đúng giao diện của
+  `FakeLLM` nên [`app/agent.py`](../app/agent.py) không cần biết đang chạy provider nào.
+  Token lấy từ `usage` thật trong response, không ước lượng.
+- Cost tính theo đơn giá của từng model (`price_for`), không hardcode một mức giá.
+- Cờ incident `cost_spike` vẫn tác động được khi dùng OpenAI: nhân `max_tokens` lên 4 để
+  câu trả lời dài ra **thật**, thay vì nhân số token một cách giả tạo.
+- Lỗi gọi API không làm sập request — trả về câu trả lời fallback và ghi
+  `finish_reason=error:<Loại lỗi>` vào metadata của generation để log/trace vẫn truy được.
+
+**Vì sao mặc định vẫn là `fake`:** đo thực tế cho thấy `gpt-4o-mini` mất **4371 ms** cho
+một request, trong khi `FakeLLM` chỉ **150 ms** và ổn định. Bài lab dùng độ trễ ổn định đó
+làm nền để đo tác động của incident `rag_slow` (+2.5s); nếu nền dao động 0.5–4s theo tải
+mạng thì không còn phân biệt được "chậm do sự cố" hay "chậm do provider", và kết quả điều
+tra CP3 sẽ không tái lập được khi chấm. Vì vậy `fake` là mặc định cho tests và bài chấm,
+`openai` bật khi cần demo câu trả lời thật.
+
+Đối chiếu chi phí thực đo cho cùng một câu hỏi:
+
+| Provider | Model | Latency | tokens in/out | Cost |
+|---|---|---|---|---|
+| fake | claude-sonnet-4-5 (mô phỏng) | 150 ms | 45 / 81 | $0.001350 |
+| openai | gpt-4o-mini | 4371 ms | 76 / 50 | $0.000041 |
