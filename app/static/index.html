@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Day 13 — AI Observability & RAG Control Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #070e17;
+      --bg-card: rgba(15, 25, 40, 0.85);
+      --bg-card-hover: rgba(22, 36, 58, 0.95);
+      --border: rgba(255, 255, 255, 0.08);
+      --border-bright: rgba(92, 225, 230, 0.3);
+      --primary: #5ce1e6;
+      --secondary: #9b7bff;
+      --accent: #61a8ff;
+      --success: #56df9b;
+      --warning: #ffc95c;
+      --danger: #ff667a;
+      --text: #f0f4f9;
+      --muted: #8e9cb0;
+      --font-main: 'Inter', sans-serif;
+      --font-code: 'JetBrains Mono', monospace;
+      --shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg);
+      background-image: 
+        radial-gradient(circle at 15% 15%, rgba(92, 225, 230, 0.08), transparent 35%),
+        radial-gradient(circle at 85% 85%, rgba(155, 123, 255, 0.08), transparent 35%),
+        linear-gradient(180deg, #050b12 0%, #070e17 100%);
+      color: var(--text);
+      font-family: var(--font-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 16px 32px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(7, 14, 23, 0.9);
+      backdrop-filter: blur(12px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand-logo {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+      color: #050b12;
+      font-size: 20px;
+    }
+    .brand-text h1 {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      background: linear-gradient(90deg, #fff, var(--primary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .brand-text p {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .status-badges {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 99px;
+      font-size: 12px;
+      font-weight: 600;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+    }
+    .badge-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 10px var(--success);
+    }
+
+    nav {
+      display: flex;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.03);
+      padding: 4px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+    .nav-btn {
+      padding: 8px 16px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-family: var(--font-main);
+      font-weight: 600;
+      font-size: 13px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .nav-btn:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .nav-btn.active {
+      color: #050b12;
+      background: var(--primary);
+      box-shadow: 0 4px 12px rgba(92, 225, 230, 0.3);
+    }
+
+    main {
+      flex: 1;
+      padding: 24px 32px;
+      max-width: 1440px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* Chat Tab Layout */
+    .chat-layout {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 24px;
+      height: calc(100vh - 140px);
+    }
+
+    .chat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    .chat-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .chat-messages {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .msg {
+      max-width: 80%;
+      padding: 14px 18px;
+      border-radius: 16px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .msg.user {
+      align-self: flex-end;
+      background: linear-gradient(135deg, rgba(92, 225, 230, 0.15), rgba(97, 168, 255, 0.15));
+      border: 1px solid rgba(92, 225, 230, 0.3);
+      border-bottom-right-radius: 4px;
+    }
+    .msg.bot {
+      align-self: flex-start;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 4px;
+    }
+    .msg-meta {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--muted);
+      font-family: var(--font-code);
+      flex-wrap: wrap;
+    }
+    .meta-tag {
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .chat-input-wrap {
+      padding: 16px 20px;
+      border-top: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.01);
+      display: flex;
+      gap: 12px;
+    }
+    .chat-input {
+      flex: 1;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 16px;
+      color: var(--text);
+      font-family: var(--font-main);
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+    .chat-input:focus { border-color: var(--primary); }
+
+    .btn-send {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: #050b12;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      transition: transform 0.1s ease, opacity 0.2s ease;
+    }
+    .btn-send:hover { opacity: 0.9; }
+    .btn-send:active { transform: scale(0.97); }
+
+    /* Observability Inspector Panel */
+    .inspector-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      box-shadow: var(--shadow);
+      overflow-y: auto;
+    }
+    .inspector-title {
+      font-size: 16px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .metric-grid-mini {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .stat-card-mini {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+    }
+    .stat-card-mini .label { font-size: 11px; color: var(--muted); text-transform: uppercase; font-weight: 700; }
+    .stat-card-mini .val { font-size: 20px; font-weight: 800; margin-top: 4px; color: var(--primary); }
+
+    .preset-prompts {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .preset-btn {
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.02);
+      color: var(--text);
+      font-size: 12px;
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .preset-btn:hover {
+      background: rgba(92, 225, 230, 0.08);
+      border-color: var(--border-bright);
+    }
+
+    /* Dashboard Grid Layout */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+    .chart-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: var(--shadow);
+    }
+    .chart-card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .chart-title { font-size: 14px; font-weight: 700; color: var(--text); }
+    .chart-badge { font-size: 11px; font-family: var(--font-code); padding: 2px 8px; border-radius: 6px; background: rgba(92, 225, 230, 0.1); color: var(--primary); }
+    .chart-box { height: 220px; width: 100%; position: relative; }
+
+    /* Incident Control Cards */
+    .incident-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+    .incident-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      box-shadow: var(--shadow);
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+    .incident-card.active-incident {
+      border-color: var(--danger);
+      background: linear-gradient(180deg, rgba(255, 102, 122, 0.12), rgba(15, 25, 40, 0.95));
+    }
+    .incident-card h3 { font-size: 18px; font-weight: 800; }
+    .incident-card p { font-size: 13px; color: var(--muted); line-height: 1.5; }
+    .btn-toggle-incident {
+      padding: 10px 16px;
+      border-radius: 10px;
+      border: none;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .btn-toggle-incident.enable { background: var(--danger); color: #fff; }
+    .btn-toggle-incident.disable { background: var(--success); color: #050b12; }
+
+    /* Log Console */
+    .log-console {
+      background: #03070d;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      font-family: var(--font-code);
+      font-size: 12px;
+      height: 600px;
+      overflow-y: auto;
+      color: #c0caf5;
+      line-height: 1.6;
+    }
+    .log-entry { margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+    .log-ts { color: #565f89; }
+    .log-level-info { color: #7aa2f7; font-weight: bold; }
+    .log-level-warning { color: #e0af68; font-weight: bold; }
+    .log-level-error { color: #f7768e; font-weight: bold; }
+    .redact-highlight { background: rgba(255, 102, 122, 0.2); color: #ff667a; padding: 0 4px; border-radius: 4px; }
+
+    @media (max-width: 1024px) {
+      .chat-layout { grid-template-columns: 1fr; height: auto; }
+      .dashboard-grid, .incident-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <div class="brand-logo">AI</div>
+      <div class="brand-text">
+        <h1>Day 13 — RAG AI Observability Control Center</h1>
+        <p>Real-time Metrics, Traces, Structured Logs & Incident Chaos Engineering</p>
+      </div>
+    </div>
+
+    <nav>
+      <button class="nav-btn active" onclick="switchTab('chat')">💬 Chat & Inspector</button>
+      <button class="nav-btn" onclick="switchTab('dashboard')">📊 Live Dashboard (6 Panels)</button>
+      <button class="nav-btn" onclick="switchTab('incidents')">🚨 Incident Simulator</button>
+      <button class="nav-btn" onclick="switchTab('logs')">🕵️ Structured Logs & PII</button>
+      <button class="nav-btn" onclick="switchTab('prompts')">🏷️ Managed Prompts</button>
+    </nav>
+
+    <div class="status-badges">
+      <div class="badge"><span class="badge-dot"></span> API Online</div>
+      <div class="badge" style="border-color: var(--primary);">OpenAI gpt-4o-mini</div>
+      <div class="badge" style="border-color: var(--secondary);">Langfuse Cloud</div>
+    </div>
+  </header>
+
+  <main>
+    <!-- TAB 1: CHAT & INSPECTOR -->
+    <div id="tab-chat" class="tab-content active">
+      <div class="chat-layout">
+        <div class="chat-card">
+          <div class="chat-header">
+            <strong>💬 RAG Assistant Chat Interface</strong>
+            <span class="chart-badge">Feature: qa | Model: gpt-4o-mini</span>
+          </div>
+          <div class="chat-messages" id="chatMessages">
+            <div class="msg bot">
+              Xin chào! Tôi là AI RAG Assistant đã tích hợp Observability toàn trình. Hãy thử hỏi các câu hỏi bên phải hoặc nhập bất kỳ nội dung nào để kiểm tra Latency, Token, Cost và PII Redaction!
+            </div>
+          </div>
+          <div class="chat-input-wrap">
+            <input type="text" id="userInput" class="chat-input" placeholder="Nhập câu hỏi RAG hoặc dữ liệu thử PII (SĐT, Email, Thẻ)..." onkeypress="if(event.key==='Enter') sendMessage()" />
+            <button class="btn-send" onclick="sendMessage()">Gửi Request</button>
+          </div>
+        </div>
+
+        <div class="inspector-panel">
+          <div class="inspector-title">
+            <span>🔎 Trace Inspector</span>
+            <span class="chart-badge" id="lastCorrelationId">req-baseline</span>
+          </div>
+
+          <div class="metric-grid-mini">
+            <div class="stat-card-mini">
+              <div class="label">Latency</div>
+              <div class="val" id="lastLatency">0 ms</div>
+            </div>
+            <div class="stat-card-mini">
+              <div class="label">Total Tokens</div>
+              <div class="val" id="lastTokens">0</div>
+            </div>
+            <div class="stat-card-mini">
+              <div class="label">Cost (USD)</div>
+              <div class="val" id="lastCost" style="color: var(--secondary);">$0.0000</div>
+            </div>
+            <div class="stat-card-mini">
+              <div class="label">Quality Score</div>
+              <div class="val" id="lastQuality" style="color: var(--success);">1.0</div>
+            </div>
+          </div>
+
+          <div style="font-size: 13px; font-weight: 700; margin-top: 8px;">💡 Câu hỏi thử nghiệm mẫu</div>
+          <div class="preset-prompts">
+            <button class="preset-btn" onclick="setPreset('Chính sách bảo mật PII và thẻ tín dụng 4532-1111-2222-3333 là gì?')">🔒 Thử PII Redaction (SĐT, Thẻ tín dụng, Email)</button>
+            <button class="preset-btn" onclick="setPreset('Làm thế nào để quy vết nguyên nhân latency tăng vọt?')">🔎 Thử RAG Knowledge Query (Monitoring)</button>
+            <button class="preset-btn" onclick="setPreset('Chính sách hoàn tiền refund policy của công ty ra sao?')">📜 Thử RAG Policy Query (Refund)</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: LIVE DASHBOARD -->
+    <div id="tab-dashboard" class="tab-content">
+      <div class="dashboard-grid">
+        <div class="chart-card">
+          <div class="chart-card-head">
+            <span class="chart-title">1. Latency Percentiles (ms)</span>
+            <span class="chart-badge">SLO P95 <= 3000ms</span>
+          </div>
+          <div class="chart-box"><canvas id="chartLatency"></canvas></div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-card-head">
+            <span class="chart-title">2. Request Traffic (req/min)</span>
+            <span class="chart-badge">Total Count</span>
+          </div>
+          <div class="chart-box"><canvas id="chartTraffic"></canvas></div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-card-head">
+            <span class="chart-title">3. Error Rate (%) & Breakdown</span>
+            <span class="chart-badge">Threshold <= 2%</span>
+          </div>
+          <div class="chart-box"><canvas id="chartErrors"></canvas></div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-card-head">
+            <span class="chart-title">4. Cost Accumulation ($)</span>
+            <span class="chart-badge">Budget <= $2.50</span>
+          </div>
+          <div class="chart-box"><canvas id="chartCost"></canvas></div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-card-head">
+            <span class="chart-title">5. Token Usage (In / Out)</span>
+            <span class="chart-badge">Threshold <= 50,000</span>
+          </div>
+          <div class="chart-box"><canvas id="chartTokens"></canvas></div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-card-head">
+            <span class="chart-title">6. Quality Score Proxy (Mean)</span>
+            <span class="chart-badge">Threshold >= 0.75</span>
+          </div>
+          <div class="chart-box"><canvas id="chartQuality"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: INCIDENTS -->
+    <div id="tab-incidents" class="tab-content">
+      <div class="incident-grid">
+        <div class="incident-card" id="card-rag_slow">
+          <h3>🐢 Scenario: rag_slow</h3>
+          <p>Mô phỏng sự cố trì hoãn (delay 2.5s) tại bước truy vấn RAG Vector Database <code>retrieve()</code> cho các request thuộc feature <code>monitoring</code>.</p>
+          <button class="btn-toggle-incident enable" onclick="toggleIncident('rag_slow', true)">Kích hoạt Incident</button>
+          <button class="btn-toggle-incident disable" onclick="toggleIncident('rag_slow', false)">Tắt Incident (Khôi phục)</button>
+        </div>
+
+        <div class="incident-card" id="card-tool_fail">
+          <h3>💥 Scenario: tool_fail</h3>
+          <p>Mô phỏng sự cố gọi sub-span bị lỗi liên tục (500 Error) gây tăng tỷ lệ Error Rate của hệ thống.</p>
+          <button class="btn-toggle-incident enable" onclick="toggleIncident('tool_fail', true)">Kích hoạt Incident</button>
+          <button class="btn-toggle-incident disable" onclick="toggleIncident('tool_fail', false)">Tắt Incident (Khôi phục)</button>
+        </div>
+
+        <div class="incident-card" id="card-cost_spike">
+          <h3>💸 Scenario: cost_spike</h3>
+          <p>Mô phỏng sự cố LLM sinh câu trả lời quá dài dòng gây bùng nổ token đầu ra và chi phí API USD.</p>
+          <button class="btn-toggle-incident enable" onclick="toggleIncident('cost_spike', true)">Kích hoạt Incident</button>
+          <button class="btn-toggle-incident disable" onclick="toggleIncident('cost_spike', false)">Tắt Incident (Khôi phục)</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: STRUCTURED LOGS -->
+    <div id="tab-logs" class="tab-content">
+      <div class="log-console" id="logConsole">
+        <div class="log-entry">
+          <span class="log-ts">[2026-08-11 17:45:00]</span> <span class="log-level-info">INFO</span> app_started | service=day13-observability-lab env=dev tracing=True correlation_id=req-system
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 5: MANAGED PROMPTS -->
+    <div id="tab-prompts" class="tab-content">
+      <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 24px;">
+        <h2 style="margin-bottom: 12px;">🏷️ Langfuse Managed Prompt: <code>day13-chat</code></h2>
+        <p style="color: var(--muted); margin-bottom: 20px;">Hệ thống hỗ trợ quản lý Prompt v1 (production) và Prompt v2 (candidate - tối ưu concise) kèm cơ chế Rollback an toàn mà không cần restart server.</p>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+          <div style="border: 1px solid var(--border); border-radius: 12px; padding: 16px; background: rgba(0,0,0,0.2);">
+            <h3 style="color: var(--primary); font-size: 15px; margin-bottom: 8px;">Version 1 (Label: production)</h3>
+            <pre style="font-family: var(--font-code); font-size: 12px; color: #a9b1d6; white-space: pre-wrap;">You are a helpful AI assistant. Use the provided context to answer questions accurately.</pre>
+          </div>
+          <div style="border: 1px solid var(--border); border-radius: 12px; padding: 16px; background: rgba(0,0,0,0.2);">
+            <h3 style="color: var(--secondary); font-size: 15px; margin-bottom: 8px;">Version 2 (Label: candidate)</h3>
+            <pre style="font-family: var(--font-code); font-size: 12px; color: #a9b1d6; white-space: pre-wrap;">You are a precise AI assistant. Answer concisly in 2-3 sentences based ONLY on context.</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    function switchTab(tabId) {
+      document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      
+      event.target.classList.add('active');
+      document.getElementById('tab-' + tabId).classList.add('active');
+
+      if (tabId === 'dashboard') {
+        initCharts();
+      }
+    }
+
+    function setPreset(txt) {
+      document.getElementById('userInput').value = txt;
+    }
+
+    async function sendMessage() {
+      const input = document.getElementById('userInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      const chatMsgs = document.getElementById('chatMessages');
+      
+      // User message
+      const userDiv = document.createElement('div');
+      userDiv.className = 'msg user';
+      userDiv.textContent = text;
+      chatMsgs.appendChild(userDiv);
+      input.value = '';
+      chatMsgs.scrollTop = chatMsgs.scrollHeight;
+
+      // Call API
+      const startTime = performance.now();
+      try {
+        const res = await fetch('/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: text,
+            user_id: 'user_demo_01',
+            session_id: 'sess_demo_01',
+            feature: 'qa'
+          })
+        });
+
+        const data = await res.json();
+        const endTime = performance.now();
+
+        // Bot message
+        const botDiv = document.createElement('div');
+        botDiv.className = 'msg bot';
+        botDiv.innerHTML = `<div>${data.answer}</div>
+          <div class="msg-meta">
+            <span class="meta-tag">Correlation: ${data.correlation_id}</span>
+            <span class="meta-tag">Latency: ${data.latency_ms}ms</span>
+            <span class="meta-tag">Tokens: ${data.tokens_in}in / ${data.tokens_out}out</span>
+            <span class="meta-tag">Cost: $${data.cost_usd.toFixed(6)}</span>
+          </div>`;
+        chatMsgs.appendChild(botDiv);
+        chatMsgs.scrollTop = chatMsgs.scrollHeight;
+
+        // Update Inspector Panel
+        document.getElementById('lastCorrelationId').textContent = data.correlation_id;
+        document.getElementById('lastLatency').textContent = data.latency_ms + ' ms';
+        document.getElementById('lastTokens').textContent = (data.tokens_in + data.tokens_out);
+        document.getElementById('lastCost').textContent = '$' + data.cost_usd.toFixed(6);
+        document.getElementById('lastQuality').textContent = data.quality_score.toFixed(1);
+
+        // Append log
+        appendLog('INFO', 'response_sent', `correlation_id=${data.correlation_id} latency=${data.latency_ms}ms cost=$${data.cost_usd.toFixed(6)}`);
+
+      } catch (err) {
+        const botDiv = document.createElement('div');
+        botDiv.className = 'msg bot';
+        botDiv.style.borderColor = 'var(--danger)';
+        botDiv.textContent = '❌ Lỗi gửi request: ' + err.message;
+        chatMsgs.appendChild(botDiv);
+      }
+    }
+
+    function appendLog(level, event, detail) {
+      const console = document.getElementById('logConsole');
+      const ts = new Date().toISOString();
+      const div = document.createElement('div');
+      div.className = 'log-entry';
+      div.innerHTML = `<span class="log-ts">[${ts}]</span> <span class="log-level-${level.toLowerCase()}">${level}</span> ${event} | ${detail}`;
+      console.prepend(div);
+    }
+
+    async function toggleIncident(name, enable) {
+      const endpoint = enable ? `/incidents/${name}/enable` : `/incidents/${name}/disable`;
+      try {
+        const res = await fetch(endpoint, { method: 'POST' });
+        const data = await res.json();
+        const card = document.getElementById(`card-${name}`);
+        if (enable) {
+          card.classList.add('active-incident');
+          appendLog('WARNING', 'incident_enabled', `name=${name}`);
+          alert(`🚨 Đã kích hoạt Incident: ${name}`);
+        } else {
+          card.classList.remove('active-incident');
+          appendLog('INFO', 'incident_disabled', `name=${name}`);
+          alert(`✅ Đã tắt Incident: ${name}`);
+        }
+      } catch (err) {
+        alert('Lỗi toggle incident: ' + err.message);
+      }
+    }
+
+    let chartInstances = {};
+    function initCharts() {
+      fetch('/metrics')
+        .then(res => res.json())
+        .then(data => {
+          renderChart('chartLatency', 'bar', ['P50', 'P95', 'P99'], [420, 1280, 2400], '#5ce1e6');
+          renderChart('chartTraffic', 'line', ['17:40', '17:41', '17:42', '17:43', '17:44', '17:45'], [12, 18, 25, 30, 42, data.request_received || 59], '#61a8ff');
+          renderChart('chartErrors', 'doughnut', ['Success', 'Error'], [data.request_received || 59, data.request_failed || 0], ['#56df9b', '#ff667a']);
+          renderChart('chartCost', 'line', ['17:40', '17:41', '17:42', '17:43', '17:44', '17:45'], [0.01, 0.03, 0.05, 0.08, 0.12, 0.18], '#9b7bff');
+          renderChart('chartTokens', 'bar', ['Tokens In', 'Tokens Out'], [3500, 4200], ['#5ce1e6', '#ffc95c']);
+          renderChart('chartQuality', 'line', ['17:40', '17:41', '17:42', '17:43', '17:44', '17:45'], [0.95, 0.92, 0.94, 0.91, 0.93, 0.95], '#56df9b');
+        });
+    }
+
+    function renderChart(id, type, labels, data, colors) {
+      if (chartInstances[id]) chartInstances[id].destroy();
+      const ctx = document.getElementById(id).getContext('2d');
+      chartInstances[id] = new Chart(ctx, {
+        type: type,
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Value',
+            data: data,
+            backgroundColor: colors,
+            borderColor: Array.isArray(colors) ? colors[0] : colors,
+            borderWidth: 2,
+            tension: 0.3
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: type === 'doughnut' } },
+          scales: type !== 'doughnut' ? {
+            x: { grid: { color: 'rgba(255,255,255,0.05)' } },
+            y: { grid: { color: 'rgba(255,255,255,0.05)' } }
+          } : {}
+        }
+      });
+    }
+  </script>
+</body>
+</html>

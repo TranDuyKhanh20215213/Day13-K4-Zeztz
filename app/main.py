@@ -42,6 +42,11 @@ async def startup() -> None:
     )
 
 
+@app.get("/")
+async def root_app() -> FileResponse:
+    return FileResponse("app/static/index.html")
+
+
 @app.get("/demo")
 async def demo_app() -> FileResponse:
     return FileResponse("submission/demo_app.html")
